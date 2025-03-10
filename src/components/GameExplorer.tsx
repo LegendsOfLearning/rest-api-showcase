@@ -30,7 +30,11 @@ type Game = {
   }
 }
 
-export default function GameExplorer() {
+type GameExplorerProps = {
+  subject?: string
+}
+
+export default function GameExplorer({ subject = 'math' }: GameExplorerProps) {
   const router = useRouter()
   const { 
     page: pageParam = '1',
@@ -67,11 +71,15 @@ export default function GameExplorer() {
       query.query = searchQuery
     }
     
+    if (subject) {
+      query.subject = subject
+    }
+    
     router.push({
       pathname: '/games',
       query
     }, undefined, { shallow: true })
-  }, [page, searchType, gameTypeFilter, searchQuery, router])
+  }, [page, searchType, gameTypeFilter, searchQuery, subject, router])
 
   // Update state when URL parameters change
   useEffect(() => {
@@ -107,13 +115,19 @@ export default function GameExplorer() {
           params.game_type = gameTypeFilter;
         }
         
+        // Add subject filter
+        if (subject) {
+          params.subject = subject;
+        }
+        
         response = await axios.get('/api/content', { params });
       } else {
         // Use the search endpoint
         response = await axios.post('/api/searches', {
           query: searchQuery,
           page,
-          page_size: 10
+          page_size: 10,
+          subject: subject
         });
       }
       
@@ -129,7 +143,7 @@ export default function GameExplorer() {
 
   useEffect(() => {
     fetchGames()
-  }, [page, searchType, gameTypeFilter])
+  }, [page, searchType, gameTypeFilter, subject])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

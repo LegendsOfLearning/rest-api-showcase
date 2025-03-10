@@ -16,8 +16,22 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'form' | 'result'>('form')
   const [embedMode, setEmbedMode] = useState<boolean>(false)
+  const [actionType, setActionType] = useState<'play' | 'assign' | 'preview'>('play')
 
   if (!isOpen) return null
+
+  const getActionDescription = () => {
+    switch (actionType) {
+      case 'play':
+        return 'Launch the standard for immediate play by a student'
+      case 'assign':
+        return 'Create an assignment for a class or group of students'
+      case 'preview':
+        return 'Preview the standard as a teacher before assigning'
+      default:
+        return ''
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +92,7 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
 
       // 4. Create join URL
       const joinResponse = await axios.post(`/api/assignments/${assignmentId}/joins`, {
-        application_user_id: studentId,
+        application_user_id: actionType === 'preview' ? teacherId : studentId,
         target: 'awakening'
       })
 
@@ -121,6 +135,22 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        What would you like to do?
+                        <select
+                          value={actionType}
+                          onChange={(e) => setActionType(e.target.value as 'play' | 'assign' | 'preview')}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        >
+                          <option value="play">Play as Student</option>
+                          <option value="assign">Assign to Students</option>
+                          <option value="preview">Preview as Teacher</option>
+                        </select>
+                      </label>
+                      <p className="mt-1 text-sm text-gray-500">{getActionDescription()}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Teacher ID
                         <input
                           type="text"
@@ -134,13 +164,16 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Student ID
+                        {actionType === 'preview' ? 'Student ID (not used for preview)' : 'Student ID'}
                         <input
                           type="text"
                           value={studentId}
                           onChange={(e) => setStudentId(e.target.value)}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                            actionType === 'preview' ? 'bg-gray-100' : ''
+                          }`}
                           placeholder="Enter student ID"
+                          disabled={actionType === 'preview'}
                         />
                       </label>
                     </div>

@@ -23,7 +23,11 @@ type StandardSet = {
   subject_area: string
 }
 
-export default function StandardsExplorer() {
+type StandardsExplorerProps = {
+  standardSet?: string
+}
+
+export default function StandardsExplorer({ standardSet = 'ccss' }: StandardsExplorerProps) {
   const [standardSets, setStandardSets] = useState<StandardSet[]>([])
   const [standards, setStandards] = useState<Standard[]>([])
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
@@ -33,6 +37,8 @@ export default function StandardsExplorer() {
   const [standardType, setStandardType] = useState<'NGSS' | 'CCSS'>('NGSS')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedStandardId, setSelectedStandardId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   // Fetch standard sets
   useEffect(() => {
@@ -60,25 +66,32 @@ export default function StandardsExplorer() {
   }, [standardType])
 
   // Fetch standards for selected set
-  useEffect(() => {
-    if (!selectedSetId) return
-
-    const fetchStandards = async () => {
-      try {
-        setLoading(true)
-        const response = await axios.get(`/api/standard_sets/${selectedSetId}/standards`)
-        setStandards(response.data.entries || [])
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching standards:', err)
-        setError('Failed to load standards')
-      } finally {
-        setLoading(false)
+  const fetchStandards = async () => {
+    try {
+      setLoading(true)
+      
+      // Use the standardSet prop to filter standards
+      const params: Record<string, any> = { 
+        page,
+        standard_set: standardSet
       }
+      
+      const response = await axios.get('/api/standard_sets', { params })
+      
+      setStandards(response.data.entries || [])
+      setTotalPages(response.data.total_pages || 1)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching standards:', err)
+      setError('Failed to load standards')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchStandards()
-  }, [selectedSetId])
+  }, [page, standardSet])
 
   // Filter standards based on search term
   const filteredStandards = standards.filter(standard => 
