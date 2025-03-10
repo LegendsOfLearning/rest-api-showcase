@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import axios from 'axios'
 import LaunchModal from './LaunchModal'
 
@@ -30,88 +31,120 @@ type Game = {
 }
 
 export default function GameExplorer() {
+  const router = useRouter()
+  const { 
+    page: pageParam = '1',
+    search_type: searchTypeParam = 'content',
+    game_type: gameTypeParam = '',
+    query: searchQueryParam = ''
+  } = router.query
+
+  // Convert URL parameters to state
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [gameType, setGameType] = useState<string>('all')
-  const [standardId, setStandardId] = useState<string>('')
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [pageSize] = useState(12)
+  const [selectedGame, setSelectedGame] = useState<number | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedGameId, setSelectedGameId] = useState<number | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchType, setSearchType] = useState<'content' | 'search'>('content')
-  const [gameTypeFilter, setGameTypeFilter] = useState<string>('')
+  const [page, setPage] = useState(parseInt(pageParam as string) || 1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchQuery, setSearchQuery] = useState(searchQueryParam as string)
+  const [searchType, setSearchType] = useState<'content' | 'search'>((searchTypeParam as string) === 'search' ? 'search' : 'content')
+  const [gameTypeFilter, setGameTypeFilter] = useState<string>(gameTypeParam as string)
 
-  // Fetch games
+  // Update URL when state changes
   useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        setLoading(true)
+    const query: Record<string, string> = { page: page.toString() }
+    
+    if (searchType === 'search') {
+      query.search_type = 'search'
+    }
+    
+    if (gameTypeFilter) {
+      query.game_type = gameTypeFilter
+    }
+    
+    if (searchQuery) {
+      query.query = searchQuery
+    }
+    
+    router.push({
+      pathname: '/games',
+      query
+    }, undefined, { shallow: true })
+  }, [page, searchType, gameTypeFilter, searchQuery, router])
+
+  // Update state when URL parameters change
+  useEffect(() => {
+    if (pageParam) {
+      setPage(parseInt(pageParam as string) || 1)
+    }
+    
+    if (searchTypeParam) {
+      setSearchType((searchTypeParam as string) === 'search' ? 'search' : 'content')
+    }
+    
+    if (gameTypeParam) {
+      setGameTypeFilter(gameTypeParam as string)
+    }
+    
+    if (searchQueryParam) {
+      setSearchQuery(searchQueryParam as string)
+    }
+  }, [pageParam, searchTypeParam, gameTypeParam, searchQueryParam])
+
+  const fetchGames = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      let response;
+      
+      if (searchType === 'content') {
+        // Use the content endpoint with filters
+        const params: Record<string, any> = { page, page_size: 10 };
         
-        let response;
-        
-        if (searchType === 'content') {
-          // Use the content endpoint with filters
-          const params: Record<string, any> = { page, page_size: pageSize }
-          
-          if (gameType !== 'all') {
-            params.game_type = gameType
-          }
-          
-          if (standardId) {
-            params.standard_ids = [parseInt(standardId)]
-          }
-          
-          response = await axios.get('/api/content', { params })
-        } else {
-          // Use the search endpoint
-          response = await axios.post('/api/searches', {
-            query: searchQuery,
-            page,
-            page_size: pageSize
-          })
+        if (gameTypeFilter) {
+          params.game_type = gameTypeFilter;
         }
         
-        setGames(response.data.entries || [])
-        setTotalPages(response.data.total_pages || 1)
-        setError(null)
-      } catch (err: any) {
-        console.error('Error fetching games:', err)
-        setError(`Error: ${err.response?.data?.error || err.message || 'Unknown error'}`)
-      } finally {
-        setLoading(false)
+        response = await axios.get('/api/content', { params });
+      } else {
+        // Use the search endpoint
+        response = await axios.post('/api/searches', {
+          query: searchQuery,
+          page,
+          page_size: 10
+        });
       }
-    }
-
-    fetchGames()
-  }, [page, pageSize, gameType, standardId, searchType, searchQuery])
-
-  // Filter games based on search term
-  const filteredGames = games.filter(game => 
-    game.game.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= totalPages) {
-      setPage(newPage)
+      
+      setGames(response.data.entries)
+      setTotalPages(response.data.total_pages)
+    } catch (err: any) {
+      console.error('Error fetching games:', err)
+      setError(`Error: ${err.response?.data?.error || err.message || 'Unknown error'}`)
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Handle game launch
-  const handleLaunchGame = (gameId: number) => {
-    setSelectedGameId(gameId)
+  useEffect(() => {
+    fetchGames()
+  }, [page, searchType, gameTypeFilter])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setPage(1) // Reset to first page
+    fetchGames()
+  }
+
+  const handleLaunch = (gameId: number) => {
+    setSelectedGame(gameId)
     setIsModalOpen(true)
   }
 
-  // Close modal
-  const handleCloseModal = () => {
+  const closeModal = () => {
     setIsModalOpen(false)
-    setSelectedGameId(null)
+    setSelectedGame(null)
   }
 
   const getGradeRange = (audience: Game['audience'] | null | undefined) => {
@@ -171,17 +204,20 @@ export default function GameExplorer() {
           </label>
         </div>
         
-        {/* Standard ID Filter */}
+        {/* Game Type Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Standard ID (Optional)
-            <input
-              type="text"
-              value={standardId}
-              onChange={(e) => setStandardId(e.target.value)}
+            Game Type
+            <select
+              value={gameTypeFilter}
+              onChange={(e) => setGameTypeFilter(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Enter standard ID..."
-            />
+            >
+              <option value="">All</option>
+              <option value="educational">Educational</option>
+              <option value="playful">Playful</option>
+              <option value="interactive">Interactive</option>
+            </select>
           </label>
         </div>
       </div>
@@ -216,14 +252,14 @@ export default function GameExplorer() {
         <>
           <div className="mt-4">
             <h3 className="text-lg font-medium text-gray-800 mb-3">
-              Games ({filteredGames.length})
+              Games ({games.length})
             </h3>
             
-            {filteredGames.length === 0 ? (
+            {games.length === 0 ? (
               <p className="text-gray-500 italic">No games found matching your criteria.</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredGames.map((game) => (
+                {games.map((game) => (
                   <div 
                     key={game.id} 
                     className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200"
@@ -256,7 +292,7 @@ export default function GameExplorer() {
                         <strong>Grades:</strong> {getGradeRange(game.audience)}
                       </div>
                       <button 
-                        onClick={() => handleLaunchGame(game.id)}
+                        onClick={() => handleLaunch(game.id)}
                         className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         Launch Game
@@ -272,7 +308,7 @@ export default function GameExplorer() {
           <div className="mt-8 flex justify-center">
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button
-                onClick={() => handlePageChange(page - 1)}
+                onClick={() => setPage(Math.max(page - 1, 1))}
                 disabled={page === 1}
                 className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
                   page === 1 
@@ -299,7 +335,7 @@ export default function GameExplorer() {
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
+                    onClick={() => setPage(pageNum)}
                     className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                       page === pageNum
                         ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
@@ -312,7 +348,7 @@ export default function GameExplorer() {
               })}
               
               <button
-                onClick={() => handlePageChange(page + 1)}
+                onClick={() => setPage(Math.min(page + 1, totalPages))}
                 disabled={page === totalPages}
                 className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
                   page === totalPages 
@@ -334,9 +370,8 @@ export default function GameExplorer() {
       {isModalOpen && (
         <LaunchModal
           isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          gameId={selectedGameId?.toString()}
-          standardId={standardId?.toString()}
+          onClose={closeModal}
+          gameId={selectedGame?.toString()}
         />
       )}
     </div>
