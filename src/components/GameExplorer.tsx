@@ -114,7 +114,9 @@ export default function GameExplorer() {
     setSelectedGameId(null)
   }
 
-  const getGradeRange = (audience: Game['audience']) => {
+  const getGradeRange = (audience: Game['audience'] | null | undefined) => {
+    if (!audience) return 'N/A';
+    
     const grades = []
     if (audience.k) grades.push('K')
     if (audience.g1) grades.push('1')
