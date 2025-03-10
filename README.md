@@ -9,9 +9,14 @@ A simple demo application showcasing integration with the Legends of Learning AP
 - Simple frontend interface to explore the API
 - Standard assignment creation and launch URL generation
 - Robust error handling for user creation
+- Search API integration for content discovery
+- Embedding options for join URLs with iframe preview
 
 ## Recent Updates
 
+- Added Search API integration for content discovery
+- Added embedding options for join URLs with iframe preview
+- Added student join URL generation to AssignmentCreator
 - Changed terminology from "Launch Game" to "Launch Standard" to align with API documentation
 - Improved error handling for user creation to handle "User already exists with different params" errors
 - Updated UI to reflect the correct terminology throughout the application
