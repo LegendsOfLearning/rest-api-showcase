@@ -15,6 +15,7 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
   const [joinUrl, setJoinUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'form' | 'result'>('form')
+  const [embedMode, setEmbedMode] = useState<boolean>(false)
 
   if (!isOpen) return null
 
@@ -194,14 +195,49 @@ export default function LaunchModal({ isOpen, onClose, gameId, standardId }: Lau
                             {joinUrl}
                           </a>
                         </div>
+
+                        <div className="mb-4">
+                          <label className="inline-flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={embedMode}
+                              onChange={(e) => setEmbedMode(e.target.checked)}
+                              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Show as embedded iframe</span>
+                          </label>
+                        </div>
                         
-                        <button
-                          type="button"
-                          onClick={() => window.open(joinUrl, '_blank')}
-                          className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          Open Standard
-                        </button>
+                        {embedMode ? (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">Embed code:</p>
+                            <div className="bg-gray-100 p-3 rounded-md overflow-auto text-left">
+                              <code className="text-xs text-gray-800">
+                                {`<iframe src="${joinUrl}" width="100%" height="600" frameborder="0" allowfullscreen></iframe>`}
+                              </code>
+                            </div>
+                            <div className="mt-4 p-4 border rounded-md">
+                              <p className="text-sm font-medium mb-2">Preview:</p>
+                              <iframe 
+                                src={joinUrl} 
+                                width="100%" 
+                                height="300" 
+                                frameBorder="0" 
+                                allowFullScreen
+                                title="Legends of Learning Content"
+                                className="border rounded"
+                              ></iframe>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => window.open(joinUrl, '_blank')}
+                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            Open Standard
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="bg-red-50 border-l-4 border-red-500 p-4">

@@ -8,6 +8,7 @@ export default function AssignmentCreator() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string; data?: any } | null>(null)
   const [joinUrl, setJoinUrl] = useState<string | null>(null)
+  const [embedMode, setEmbedMode] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -216,12 +217,48 @@ export default function AssignmentCreator() {
               {joinUrl}
             </a>
           </div>
-          <button
-            onClick={() => window.open(joinUrl, '_blank')}
-            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Open Join URL
-          </button>
+
+          <div className="mb-4">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={embedMode}
+                onChange={(e) => setEmbedMode(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              <span className="ml-2 text-sm text-gray-700">Show as embedded iframe</span>
+            </label>
+          </div>
+          
+          {embedMode ? (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Embed code:</p>
+              <div className="bg-gray-100 p-3 rounded-md overflow-auto text-left">
+                <code className="text-xs text-gray-800">
+                  {`<iframe src="${joinUrl}" width="100%" height="600" frameborder="0" allowfullscreen></iframe>`}
+                </code>
+              </div>
+              <div className="mt-4 p-4 border rounded-md">
+                <p className="text-sm font-medium mb-2">Preview:</p>
+                <iframe 
+                  src={joinUrl} 
+                  width="100%" 
+                  height="300" 
+                  frameBorder="0" 
+                  allowFullScreen
+                  title="Legends of Learning Content"
+                  className="border rounded"
+                ></iframe>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => window.open(joinUrl, '_blank')}
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Open Join URL
+            </button>
+          )}
         </div>
       )}
     </div>

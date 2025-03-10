@@ -12,6 +12,21 @@ type Game = {
   content_type: string
   supports_ipad: boolean
   supports_tts: boolean
+  audience: {
+    g1: boolean
+    g2: boolean
+    g3: boolean
+    g4: boolean
+    g5: boolean
+    g6: boolean
+    g7: boolean
+    g8: boolean
+    g9: boolean
+    g10: boolean
+    g11: boolean
+    g12: boolean
+    k: boolean
+  }
 }
 
 export default function GameExplorer() {
@@ -26,6 +41,9 @@ export default function GameExplorer() {
   const [pageSize] = useState(12)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState<'content' | 'search'>('content')
+  const [gameTypeFilter, setGameTypeFilter] = useState<string>('')
 
   // Fetch games
   useEffect(() => {
@@ -33,34 +51,43 @@ export default function GameExplorer() {
       try {
         setLoading(true)
         
-        // Build query parameters
-        const params: Record<string, any> = {
-          page,
-          page_size: pageSize
+        let response;
+        
+        if (searchType === 'content') {
+          // Use the content endpoint with filters
+          const params: Record<string, any> = { page, page_size: pageSize }
+          
+          if (gameType !== 'all') {
+            params.game_type = gameType
+          }
+          
+          if (standardId) {
+            params.standard_ids = [parseInt(standardId)]
+          }
+          
+          response = await axios.get('/api/content', { params })
+        } else {
+          // Use the search endpoint
+          response = await axios.post('/api/searches', {
+            query: searchQuery,
+            page,
+            page_size: pageSize
+          })
         }
         
-        if (gameType !== 'all') {
-          params.game_type = gameType
-        }
-        
-        if (standardId) {
-          params.standard_ids = [parseInt(standardId)]
-        }
-        
-        const response = await axios.get('/api/content', { params })
         setGames(response.data.entries || [])
         setTotalPages(response.data.total_pages || 1)
         setError(null)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching games:', err)
-        setError('Failed to load games')
+        setError(`Error: ${err.response?.data?.error || err.message || 'Unknown error'}`)
       } finally {
         setLoading(false)
       }
     }
 
     fetchGames()
-  }, [page, pageSize, gameType, standardId])
+  }, [page, pageSize, gameType, standardId, searchType, searchQuery])
 
   // Filter games based on search term
   const filteredGames = games.filter(game => 
@@ -87,6 +114,27 @@ export default function GameExplorer() {
     setSelectedGameId(null)
   }
 
+  const getGradeRange = (audience: Game['audience']) => {
+    const grades = []
+    if (audience.k) grades.push('K')
+    if (audience.g1) grades.push('1')
+    if (audience.g2) grades.push('2')
+    if (audience.g3) grades.push('3')
+    if (audience.g4) grades.push('4')
+    if (audience.g5) grades.push('5')
+    if (audience.g6) grades.push('6')
+    if (audience.g7) grades.push('7')
+    if (audience.g8) grades.push('8')
+    if (audience.g9) grades.push('9')
+    if (audience.g10) grades.push('10')
+    if (audience.g11) grades.push('11')
+    if (audience.g12) grades.push('12')
+    
+    if (grades.length === 0) return 'N/A'
+    
+    return grades.join(', ')
+  }
+
   return (
     <div className="bg-white shadow-sm rounded-lg p-6">
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">Game Explorer</h2>
@@ -98,10 +146,10 @@ export default function GameExplorer() {
             Search Games
             <input
               type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="Search by name or description..."
+              placeholder="Enter search terms"
             />
           </label>
         </div>
@@ -109,17 +157,14 @@ export default function GameExplorer() {
         {/* Game Type Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Game Type
+            Search Type
             <select
-              value={gameType}
-              onChange={(e) => setGameType(e.target.value)}
+              value={searchType}
+              onChange={(e) => setSearchType(e.target.value as 'content' | 'search')}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             >
-              <option value="all">All Types</option>
-              <option value="simulation">Simulation</option>
-              <option value="video">Video</option>
-              <option value="question">Question</option>
-              <option value="instructional">Instructional</option>
+              <option value="content">Content API</option>
+              <option value="search">Search API</option>
             </select>
           </label>
         </div>
@@ -205,6 +250,9 @@ export default function GameExplorer() {
                       <p className="text-sm text-gray-500 mb-3">
                         Duration: {game.estimated_duration} min
                       </p>
+                      <div className="text-xs text-gray-500 mb-3">
+                        <strong>Grades:</strong> {getGradeRange(game.audience)}
+                      </div>
                       <button 
                         onClick={() => handleLaunchGame(game.id)}
                         className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -281,12 +329,14 @@ export default function GameExplorer() {
       )}
       
       {/* Launch Modal */}
-      <LaunchModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        gameId={selectedGameId || undefined}
-        standardId={standardId ? parseInt(standardId) : undefined}
-      />
+      {isModalOpen && (
+        <LaunchModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          gameId={selectedGameId?.toString()}
+          standardId={standardId?.toString()}
+        />
+      )}
     </div>
   )
 } 
