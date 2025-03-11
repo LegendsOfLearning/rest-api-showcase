@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import LaunchModal from './LaunchModal'
+import Image from 'next/image'
+import SubjectSelector from './SubjectSelector'
 
 type Content = {
   id: number
@@ -32,14 +34,23 @@ type Content = {
   }
 }
 
+type StandardSet = {
+  id: string
+  name: string
+  subject_area: string
+  grade_level?: string
+  public?: boolean
+}
+
 type GradeLevel = 'K' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12'
 type ContentType = 'instructional' | 'question' | 'simulation' | 'video'
 
 type ContentExplorerProps = {
-  subject?: string
+  subject: string;
+  standardSet?: string | null;
 }
 
-export default function ContentExplorer({ subject = 'math' }: ContentExplorerProps) {
+export default function ContentExplorer({ subject = 'math', standardSet }: ContentExplorerProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -52,6 +63,8 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null)
+  const [standardSets, setStandardSets] = useState<StandardSet[]>([])
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(standardSet || null)
   
   // Constants
   const gradeOptions: GradeLevel[] = ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
@@ -82,6 +95,42 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
     }
   }, [searchParams])
   
+  // Fetch standard sets
+  useEffect(() => {
+    const fetchStandardSets = async () => {
+      try {
+        setLoading(true)
+        // Use the standard_sets API endpoint
+        const response = await axios.get('/api/standard_sets', {
+          params: {
+            per_page: 1000
+          }
+        })
+        
+        if (response.data && response.data.results) {
+          // Filter by subject area
+          const filteredSets = response.data.results.filter((set: StandardSet) => 
+            set.subject_area.toLowerCase() === subject.toLowerCase()
+          )
+          
+          setStandardSets(filteredSets)
+          setError(null)
+        } else {
+          console.log('No standard sets found in API response')
+          setStandardSets([])
+          setError('No standard sets available')
+        }
+      } catch (err) {
+        console.error('Error fetching standard sets:', err)
+        setError('Failed to load standard sets')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStandardSets()
+  }, [subject])
+  
   // Fetch content
   useEffect(() => {
     const fetchContent = async () => {
@@ -97,24 +146,29 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
         }
         
         if (selectedContentTypes.length > 0) {
-          params.append('types', selectedContentTypes.join(','))
+          params.append('type', selectedContentTypes[0]) // API only supports single type
         }
         
         if (searchTerm) {
-          params.append('search', searchTerm)
+          params.append('query', searchTerm)
         }
         
         params.append('subject', subject)
+        if (selectedSetId) {
+          params.append('standard_set', selectedSetId)
+        }
+        params.append('page', '1')
+        params.append('per_page', '50') // Get more items for better filtering
         
         // Make API request
         const response = await axios.get(`/api/content?${params.toString()}`)
         
-        if (response.data && Array.isArray(response.data)) {
-          setContent(response.data)
+        if (response.data && response.data.entries) {
+          setContent(response.data.entries)
         } else {
           setError('Invalid response format')
         }
-      } catch (err) {
+      } catch (err: any) {
         setError('Failed to fetch content. Please try again.')
         console.error('Error fetching content:', err)
       } finally {
@@ -123,7 +177,7 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
     }
     
     fetchContent()
-  }, [selectedGrades, selectedContentTypes, searchTerm, subject])
+  }, [selectedGrades, selectedContentTypes, searchTerm, subject, selectedSetId])
   
   // Update URL when filters change
   useEffect(() => {
@@ -180,6 +234,19 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
     setSelectedContentId(null)
   }
   
+  // Handle standard set change
+  const handleStandardSetChange = (setId: string) => {
+    setSelectedSetId(setId)
+    // Update URL
+    const params = new URLSearchParams(searchParams.toString())
+    if (setId) {
+      params.set('standard_set', setId)
+    } else {
+      params.delete('standard_set')
+    }
+    router.push(`/content?${params.toString()}`)
+  }
+  
   // Filter content based on search term
   const filteredContent = content.filter(item => 
     item.game.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,10 +255,41 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Content Explorer</h1>
+      <h1 className="text-3xl font-bold mb-8">Content Search</h1>
       
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+        {/* Subject Area */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Subject Area</h2>
+          <SubjectSelector 
+            currentSubject={subject} 
+            onSubjectChange={(newSubject) => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set('subject', newSubject);
+              router.push(`/content?${params.toString()}`);
+            }}
+          />
+        </div>
+
+        {/* Standard Set Selector */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Standard Set</h2>
+          <select
+            value={selectedSetId || ''}
+            onChange={(e) => handleStandardSetChange(e.target.value)}
+            className="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          >
+            <option value="">All Standard Sets</option>
+            {standardSets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Search</h2>
           <input
@@ -293,12 +391,13 @@ export default function ContentExplorer({ subject = 'math' }: ContentExplorerPro
         </div>
       )}
       
-      {/* Modal for launching content */}
-      {isModalOpen && (
-        <LaunchModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          contentId={selectedContentId?.toString()}
+      {/* Launch Modal */}
+      {isModalOpen && selectedContentId && (
+        <LaunchModal 
+          contentId={selectedContentId.toString()} 
+          contentType="content"
+          onClose={closeModal} 
+          standardSetId={selectedSetId || ''}
         />
       )}
     </div>

@@ -1,22 +1,123 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 
+type StandardSet = {
+  id: string
+  name: string
+  subject_area: string
+}
+
+type Standard = {
+  id: number
+  standard_code: string
+  learning_objective: string
+}
+
+type User = {
+  id: number
+  application_user_id: string
+  first_name: string
+  last_name: string
+  role: 'teacher' | 'student'
+}
+
 export default function AssignmentCreator() {
-  const [standardId, setStandardId] = useState('')
-  const [teacherId, setTeacherId] = useState('')
-  const [studentId, setStudentId] = useState('')
+  // State for standard sets and standards
+  const [standardSets, setStandardSets] = useState<StandardSet[]>([])
+  const [selectedSetId, setSelectedSetId] = useState<string>('')
+  const [standards, setStandards] = useState<Standard[]>([])
+  const [selectedStandardId, setSelectedStandardId] = useState<string>('')
+  
+  // State for users
+  const [teachers, setTeachers] = useState<User[]>([])
+  const [students, setStudents] = useState<User[]>([])
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  
+  // State for join options
+  const [createLinksNow, setCreateLinksNow] = useState<boolean>(true)
+  const [displayType, setDisplayType] = useState<'embed' | 'redirect'>('redirect')
+  const [useAwakening, setUseAwakening] = useState<boolean>(true)
+  
+  // UI state
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ success: boolean; message: string; data?: any } | null>(null)
-  const [joinUrl, setJoinUrl] = useState<string | null>(null)
-  const [embedMode, setEmbedMode] = useState<boolean>(false)
+  const [joinUrls, setJoinUrls] = useState<Map<string, string>>(new Map())
+
+  // Fetch standard sets
+  useEffect(() => {
+    const fetchStandardSets = async () => {
+      try {
+        const response = await axios.get('/api/standard_sets', {
+          params: { per_page: 1000 }
+        })
+        if (response.data && response.data.results) {
+          setStandardSets(response.data.results)
+        }
+      } catch (error) {
+        console.error('Error fetching standard sets:', error)
+        setError(error instanceof Error ? error.message : 'Error fetching standard sets')
+      }
+    }
+    fetchStandardSets()
+  }, [])
+
+  // Fetch standards when standard set is selected
+  useEffect(() => {
+    const fetchStandards = async () => {
+      if (!selectedSetId) {
+        setStandards([])
+        return
+      }
+      
+      try {
+        const response = await axios.get(`/api/standard_sets/${selectedSetId}/standards`)
+        if (response.data && response.data.results) {
+          setStandards(response.data.results)
+        }
+      } catch (error) {
+        console.error('Error fetching standards:', error)
+        setError(error instanceof Error ? error.message : 'Error fetching standards')
+      }
+    }
+    fetchStandards()
+  }, [selectedSetId])
+
+  // Fetch users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        // Fetch teachers
+        const teachersResponse = await axios.get('/api/users', {
+          params: { role: 'teacher' }
+        })
+        if (teachersResponse.data?.users) {
+          setTeachers(teachersResponse.data.users)
+        }
+
+        // Fetch students
+        const studentsResponse = await axios.get('/api/users', {
+          params: { role: 'student' }
+        })
+        if (studentsResponse.data?.users) {
+          setStudents(studentsResponse.data.users)
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error)
+        setError(error instanceof Error ? error.message : 'Error fetching users')
+      }
+    }
+    fetchUsers()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!standardId || !teacherId) {
+    if (!selectedStandardId || !selectedTeacherId || (createLinksNow && selectedStudentIds.length === 0)) {
       setResult({
         success: false,
-        message: 'Please fill in Standard ID and Teacher ID fields'
+        message: 'Please fill in all required fields' + (createLinksNow ? ' and select at least one student' : '')
       })
       return
     }
@@ -24,116 +125,71 @@ export default function AssignmentCreator() {
     try {
       setLoading(true)
       setResult(null)
-      setJoinUrl(null)
+      setJoinUrls(new Map())
       
-      // Create the assignment with idempotent user creation
-      console.log(`Creating assignment for standard ID: ${standardId}`)
-      
-      let assignmentResponse;
-      try {
-        assignmentResponse = await axios.post('/api/assignments', {
-          type: 'standard',
-          standard_id: parseInt(standardId),
-          application_user_id: teacherId,
-          teacher_first_name: 'Demo',
-          teacher_last_name: 'Teacher'
-        })
-      } catch (error: any) {
-        // Check if it's a connection reset error
-        if (error.response?.data?.error?.includes('Connection to the API server was reset') || 
-            error.message?.includes('ECONNRESET')) {
-          console.log('Connection reset detected, retrying assignment creation...')
-          // Wait a moment and retry once
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          assignmentResponse = await axios.post('/api/assignments', {
-            type: 'standard',
-            standard_id: parseInt(standardId),
-            application_user_id: teacherId,
-            teacher_first_name: 'Demo',
-            teacher_last_name: 'Teacher'
-          })
-        } else {
-          throw error
-        }
-      }
+      // Get dates
+      const startDate = new Date()
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() + 7)
+
+      const selectedTeacher = teachers.find(t => t.application_user_id === selectedTeacherId)
+
+      // Create the assignment
+      const assignmentResponse = await axios.post('/api/assignments', {
+        type: 'standard',
+        standard_id: parseInt(selectedStandardId),
+        application_user_id: selectedTeacherId,
+        teacher_first_name: selectedTeacher?.first_name || 'Demo',
+        teacher_last_name: selectedTeacher?.last_name || 'Teacher',
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString()
+      })
 
       const assignmentId = assignmentResponse.data.assignment_id
 
       setResult({
         success: true,
-        message: 'Assignment created successfully!',
-        data: assignmentResponse.data
+        message: 'Assignment created successfully!'
       })
 
-      // If student ID is provided, create join URL
-      if (studentId) {
-        try {
-          // Generate join URL with idempotent user creation
-          console.log(`Creating join URL for assignment: ${assignmentId}`)
-          
-          let joinResponse;
+      // Generate join URLs if auto-join is enabled
+      if (createLinksNow && selectedStudentIds.length > 0) {
+        const newJoinUrls = new Map<string, string>()
+        
+        for (const studentId of selectedStudentIds) {
           try {
-            joinResponse = await axios.post(`/api/assignments/${assignmentId}/joins`, {
-              application_user_id: studentId,
-              student_first_name: 'Demo',
-              student_last_name: 'Student',
-              target: 'awakening'
-            })
-          } catch (error: any) {
-            // Check if it's a connection reset error
-            if (error.response?.data?.error?.includes('Connection to the API server was reset') || 
-                error.message?.includes('ECONNRESET')) {
-              console.log('Connection reset detected, retrying join URL creation...')
-              // Wait a moment and retry once
-              await new Promise(resolve => setTimeout(resolve, 2000))
-              joinResponse = await axios.post(`/api/assignments/${assignmentId}/joins`, {
-                application_user_id: studentId,
-                student_first_name: 'Demo',
-                student_last_name: 'Student',
-                target: 'awakening'
-              })
-            } else {
-              throw error
-            }
-          }
+            const student = students.find(s => s.application_user_id === studentId)
+            if (!student) continue
 
-          setJoinUrl(joinResponse.data.join_url)
-        } catch (error: any) {
-          console.error('Error generating join URL:', error)
-          
-          // Provide a more user-friendly error message for connection issues
-          if (error.message?.includes('Network Error') || 
-              error.message?.includes('ECONNRESET') ||
-              error.response?.data?.error?.includes('Connection')) {
-            setResult({
-              success: true,
-              message: 'Assignment created, but there was a network issue when generating the join URL. Please try again.'
+            const joinResponse = await axios.post(`/api/assignments/${assignmentId}/joins`, {
+              application_user_id: studentId,
+              student_first_name: student.first_name,
+              student_last_name: student.last_name,
+              target: useAwakening ? 'awakening' : 'classic'
             })
-          } else {
-            setResult({
-              success: true,
-              message: `Assignment created, but failed to generate join URL: ${error.response?.data?.error || error.message || 'Unknown error'}`
-            })
+            
+            if (joinResponse.data?.join_url) {
+              newJoinUrls.set(studentId, joinResponse.data.join_url)
+            }
+          } catch (error) {
+            console.error(`Error generating join URL for student ${studentId}:`, error)
           }
+        }
+        
+        setJoinUrls(newJoinUrls)
+
+        // If we have URLs and redirect is selected, open the first one in a new tab
+        if (newJoinUrls.size > 0 && displayType === 'redirect' && typeof window !== 'undefined') {
+          const firstUrl = Array.from(newJoinUrls.values())[0]
+          window.open(firstUrl, '_blank')
         }
       }
     } catch (error: any) {
       console.error('Error creating assignment:', error)
-      
-      // Provide a more user-friendly error message for connection issues
-      if (error.message?.includes('Network Error') || 
-          error.message?.includes('ECONNRESET') ||
-          error.response?.data?.error?.includes('Connection')) {
-        setResult({
-          success: false,
-          message: 'Network connection issue. Please check your internet connection and try again.'
-        })
-      } else {
-        setResult({
-          success: false,
-          message: `Error: ${error.response?.data?.error || error.message || 'Unknown error'}`
-        })
-      }
+      setResult({
+        success: false,
+        message: `Error: ${error.response?.data?.error || error.message || 'Unknown error'}`
+      })
     } finally {
       setLoading(false)
     }
@@ -143,7 +199,7 @@ export default function AssignmentCreator() {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
         <h2 className="text-xl font-semibold text-slate-900">Create Assignment</h2>
-        <p className="mt-1 text-sm text-slate-600">Assign content to students for testing purposes.</p>
+        <p className="mt-1 text-sm text-slate-600">Create and assign content to students.</p>
       </div>
       
       <div className="p-6">
@@ -165,66 +221,194 @@ export default function AssignmentCreator() {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium">
-                  <strong>{result.success ? 'Success:' : 'Error:'}</strong> {result.message}
+                  {result.message}
                 </p>
-                
-                {result.success && result.data && (
-                  <div className="mt-2">
-                    <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                      {JSON.stringify(result.data, null, 2)}
-                    </pre>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Standard ID
-              <input
-                type="text"
-                value={standardId}
-                onChange={(e) => setStandardId(e.target.value)}
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Enter standard ID"
-              />
-            </label>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Teacher ID
-              <input
-                type="text"
-                value={teacherId}
-                onChange={(e) => setTeacherId(e.target.value)}
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Enter Teacher ID"
-              />
-            </label>
+          {/* Standards Section */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-900 mb-4">Standards Selection</h4>
+            <div className="space-y-4">
+              {/* Standard Set Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Standard Set
+                  <select
+                    value={selectedSetId}
+                    onChange={(e) => {
+                      setSelectedSetId(e.target.value)
+                      setSelectedStandardId('')
+                    }}
+                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Select a standard set</option>
+                    {standardSets.map((set) => (
+                      <option key={set.id} value={set.id}>
+                        {set.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {/* Standard Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Standard
+                  <select
+                    value={selectedStandardId}
+                    onChange={(e) => setSelectedStandardId(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    required
+                    disabled={!selectedSetId}
+                  >
+                    <option value="">
+                      {selectedSetId ? 'Select a standard' : 'First select a standard set'}
+                    </option>
+                    {standards.map((standard) => (
+                      <option key={standard.id} value={standard.id}>
+                        {standard.standard_code} - {standard.learning_objective}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Student ID (optional, for join URL generation)
-              <input
-                type="text"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="Enter Student ID (optional)"
-              />
-            </label>
+          {/* Teacher Selection */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-900 mb-4">Teacher</h4>
+            <div>
+              <select
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                className="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                required
+              >
+                <option value="">Select a teacher</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.application_user_id} value={teacher.application_user_id}>
+                    {teacher.first_name} {teacher.last_name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          
+
+          {/* Assignment Options */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-900 mb-4">Assignment Options</h4>
+            <div className="space-y-4">
+              {/* Assignment Dates - Display Only */}
+              <div className="bg-white p-3 rounded border border-slate-200">
+                <div className="space-y-1">
+                  <p className="text-sm text-slate-600">
+                    Start: <span className="font-medium">Now</span>
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    End: <span className="font-medium">7 days from now</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      value="redirect"
+                      checked={displayType === 'redirect'}
+                      onChange={(e) => setDisplayType(e.target.value as 'embed' | 'redirect')}
+                      className="form-radio h-4 w-4 text-indigo-600"
+                    />
+                    <span className="ml-2 text-sm text-slate-700">Redirect</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      value="embed"
+                      checked={displayType === 'embed'}
+                      onChange={(e) => setDisplayType(e.target.value as 'embed' | 'redirect')}
+                      className="form-radio h-4 w-4 text-indigo-600"
+                    />
+                    <span className="ml-2 text-sm text-slate-700">Embed</span>
+                  </label>
+                </div>
+
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={useAwakening}
+                    onChange={(e) => setUseAwakening(e.target.checked)}
+                    className="form-checkbox h-4 w-4 text-indigo-600"
+                  />
+                  <span className="ml-2 text-sm text-slate-700">Use Awakening (recommended)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Join Options */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-medium text-slate-900 mb-4">Join Options</h4>
+            <div className="space-y-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={createLinksNow}
+                  onChange={(e) => setCreateLinksNow(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-indigo-600"
+                />
+                <span className="ml-2 text-sm text-slate-700">Create join links now</span>
+              </label>
+
+              {createLinksNow && (
+                <div>
+                  {/* Student Selection - Only shown when creating join links */}
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Students
+                    </label>
+                    <select
+                      multiple
+                      value={selectedStudentIds}
+                      onChange={(e) => {
+                        const options = Array.from(e.target.selectedOptions)
+                        setSelectedStudentIds(options.map(option => option.value))
+                      }}
+                      className="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required={createLinksNow}
+                      size={5}
+                    >
+                      {students.length === 0 ? (
+                        <option disabled>Loading students...</option>
+                      ) : (
+                        students.map((student) => (
+                          <option key={student.application_user_id} value={student.application_user_id}>
+                            {student.first_name} {student.last_name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="mt-2 text-xs text-slate-500">Hold Ctrl/Cmd to select multiple students</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Submit Button */}
           <div className="pt-4">
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed ${
+              className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
                 loading ? 'opacity-70 cursor-not-allowed' : ''
               }`}
             >
@@ -243,61 +427,42 @@ export default function AssignmentCreator() {
           </div>
         </form>
         
-        {joinUrl && (
-          <div className="mt-4 p-4 rounded-md bg-blue-50 text-blue-800">
-            <h3 className="text-lg font-medium mb-2">Student Join URL</h3>
-            <div className="bg-white p-3 rounded-md mb-3 overflow-auto">
-              <a 
-                href={joinUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline break-all"
-              >
-                {joinUrl}
-              </a>
+        {/* Join URLs Display */}
+        {joinUrls.size > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-slate-900 mb-4">Assignment URLs</h3>
+            <div className="space-y-4">
+              {Array.from(joinUrls.entries()).map(([studentId, url]) => {
+                const student = students.find(s => s.application_user_id === studentId)
+                return (
+                  <div key={studentId} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-slate-900">
+                        {student ? `${student.first_name} ${student.last_name}` : studentId}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => typeof window !== 'undefined' && window.open(url, '_blank')}
+                        className="text-sm text-indigo-600 hover:text-indigo-700"
+                      >
+                        Open
+                      </button>
+                    </div>
+                    
+                    {displayType === 'embed' && (
+                      <div className="mt-2">
+                        <p className="text-sm text-slate-600 mb-1">Embed code:</p>
+                        <div className="bg-white p-2 rounded border border-slate-200">
+                          <code className="text-xs text-slate-800 break-all">
+                            {`<iframe src="${url}" width="100%" height="600" frameborder="0" allowfullscreen></iframe>`}
+                          </code>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-
-            <div className="mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  checked={embedMode}
-                  onChange={(e) => setEmbedMode(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                />
-                <span className="ml-2 text-sm text-gray-700">Show as embedded iframe</span>
-              </label>
-            </div>
-            
-            {embedMode ? (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">Embed code:</p>
-                <div className="bg-gray-100 p-3 rounded-md overflow-auto text-left">
-                  <code className="text-xs text-gray-800">
-                    {`<iframe src="${joinUrl}" width="100%" height="600" frameborder="0" allowfullscreen></iframe>`}
-                  </code>
-                </div>
-                <div className="mt-4 p-4 border rounded-md">
-                  <p className="text-sm font-medium mb-2">Preview:</p>
-                  <iframe 
-                    src={joinUrl} 
-                    width="100%" 
-                    height="300" 
-                    frameBorder="0" 
-                    allowFullScreen
-                    title="Legends of Learning Content"
-                    className="border rounded"
-                  ></iframe>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => window.open(joinUrl, '_blank')}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Open Join URL
-              </button>
-            )}
           </div>
         )}
       </div>

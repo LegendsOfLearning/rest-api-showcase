@@ -1,287 +1,117 @@
-# Legends of Learning - Partner Integration
+# Legends of Learning - XtraMath Integration
 
-This document outlines the integration between Legends of Learning (LoL) and Partner platforms, covering security, authentication, and available APIs.
+This document outlines the integration between Legends of Learning (LoL) and XtraMath platforms, covering security, authentication, and available APIs.
 
 ## Table of Contents
-1. [Getting Started](#getting-started)
-   - [Application Registration](#1-application-registration)
-   - [Authentication Flow](#2-authentication-flow)
-2. [Security Model](#security-model)
-   - [OAuth 2.0 Implementation](#oauth-20-implementation)
-   - [Scope System](#scope-system)
-3. [Assignment API](#assignment-api)
+- [Getting Started](#getting-started)
+   - [Application Registration](#application-registration)
+   - [Authorization Flow](#authorization-flow)
+- [Sample Scenario](#sample-scenario)
    - [Overview](#overview)
    - [Complete Flow](#complete-flow)
-   - [Endpoints](#endpoints)
-   - [Assignment Creation](#assignment-creation)
-   - [Join URL Generation](#join-url-generation)
-   - [Error Handling](#error-handling)
-   - [Authentication and Security](#authentication-and-security)
-   - [Implementation Notes](#implementation-notes)
-4. [API Reference](#api-reference)
-   - [Base URLs and Authentication](#base-urls-and-authentication)
-   - [Authentication Flow](#authentication-flow)
-   - [Scope System](#scope-system-1)
-   - [Content API](#content-api)
-     - `GET /api/v3/content`
-     - `GET /api/v3/content/:id`
-     - `GET /api/v3/content/:id/reviews`
-   - [Assignment Management](#assignment-management)
-     - `POST /api/v3/assignments`
-     - `POST /api/v3/assignments/:id/joins`
-   - [User Management](#user-management)
-     - `GET /api/v3/users`
-     - `POST /api/v3/users`
-     - `GET /api/v3/users/:id`
-     - `PUT /api/v3/users/:id`
-   - [Standards Management](#standards-management)
-     - `GET /api/v3/standard_sets`
-     - `GET /api/v3/standard_sets/:id/standards`
-   - [Search API](#search-api)
-     - `POST /api/v3/searches`
-   - [OAuth Endpoints](#oauth-endpoints)
-     - `POST /api/v3/oauth2/token`
-     - `POST /api/v3/oauth2/revoke`
-5. [Integration Guidelines](#integration-guidelines)
-   - [Best Practices](#best-practices)
-   - [Common Patterns](#common-patterns)
-6. [Implementation Notes](#implementation-notes)
-   - [Authentication Pipeline](#authentication-pipeline)
-   - [Error Handling](#error-handling)
-   - [CDN Integration](#cdn-integration)
-7. [Support](#support)
+     - [Authorization Flow Diagram](#authorization-flow-diagram)
+- [API Reference](#api-reference)
+   - [OAuth](#oauth)
+     - [`POST /api/v3/oauth2/token`](#POST-apiv3oauth2token)
+     - [`POST /api/v3/oauth2/revoke`](#POST-apiv3oauth2revoke)
+   - [Search](#search)
+     - [`POST /api/v3/searches`](#POST-apiv3searches)
+   - [Standards](#standards)
+     - [`GET /api/v3/standard_sets`](#GET-apiv3standard_sets)
+     - [`GET /api/v3/standard_sets/:id/standards`](#GET-apiv3standard_setsidstandards)
+   - [Content](#content)
+     - [`GET /api/v3/content`](#GET-apiv3content)
+     - [`GET /api/v3/content/:id`](#GET-apiv3contentid)
+     - [`GET /api/v3/content/:id/reviews`](#GET-apiv3contentidreviews)
+   - [Users](#users)
+     - [`GET /api/v3/users`](#GET-apiv3users)
+     - [`POST /api/v3/users`](#POST-apiv3users)
+     - [`GET /api/v3/users/:id`](#GET-apiv3usersid)
+     - [`PUT /api/v3/users/:id`](#PUT-apiv3usersid)
+   - [Assignments](#assignments)
+     - [`POST /api/v3/assignments`](#POST-apiv3assignments)
+     - [`POST /api/v3/assignments/:id/joins`](#POST-apiv3assignmentsidjoins)
 
 ## Getting Started
 
-### 1. Application Registration
+### Application Registration
 
-1. Contact the Legends of Learning team to register your application
-2. Provide:
+In order to use the API, an application must be registered.
+
+1. Contact the Legends of Learning team to register your application with the following information:
    - Application name
-   - Brief description
-   - Contact information
-   - Redirect URLs (if applicable)
-   - Expected usage volume
-
-### 2. Authentication Flow
-
-1. Obtain credentials (after approval):
+   - Redirect URL (if applicable)
+2. Obtain credentials from Legends of Learning:
    - Client ID
    - Client Secret (⚠️ Keep secure, never expose in client-side code)
 
-2. Get access token:
-```http
-POST /api/v3/oauth2/token
-Content-Type: application/x-www-form-urlencoded
+### Authorization Flow
 
-grant_type=client_credentials&
-client_id=YOUR_CLIENT_ID&
-client_secret=YOUR_CLIENT_SECRET
-```
+The integration uses OAuth 2.0 with Client Credentials flow, ensuring secure
+communication between platforms. Each application receives its own set of
+credentials and can only access its own users and data.
 
-Response:
-```json
-{
-  "access_token": "...",
-  "token_type": "bearer",
-  "expires_in": 3600,
-  "scope": "public:read content:read ..."
-}
-```
+1. Get access token:
+   ```http
+   POST /api/v3/oauth2/token
+   Content-Type: application/x-www-form-urlencoded
+   Accept: application/json
+   
+   grant_type=client_credentials&
+   client_id=YOUR_CLIENT_ID&
+   client_secret=YOUR_CLIENT_SECRET
+   ```
 
-3. Use token in API requests:
-```http
-GET /api/v3/content
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+   Response:
+   ```json
+   {
+     "access_token": "YOUR_ACCESS_TOKEN",
+     "token_type": "bearer",
+     "expires_in": 3600
+   }
+   ```
 
-## Security Model
+2. Use token in API requests:
+   ```http
+   GET /api/v3/content
+   Authorization: Bearer YOUR_ACCESS_TOKEN
+   ```
 
-### OAuth 2.0 Implementation
-
-The integration uses OAuth 2.0 with Client Credentials flow, ensuring secure communication between platforms. Each application receives its own set of credentials and can only access its own users and data.
+#### Authorization Flow Diagram
 
 ```mermaid
 sequenceDiagram
-    participant Partner as Partner
+    participant XM as XtraMath
     participant LoL as Legends of Learning API
     
-    Note over Partner, LoL: OAuth 2.0 Client Credentials Flow
+    Note over XM, LoL: OAuth 2.0 Client Credentials Flow
     
-    Partner->>LoL: POST /oauth2/token<br/>{client_id, client_secret, grant_type}
+    XM->>LoL: POST /oauth2/token<br/>{client_id, client_secret, grant_type}
     LoL->>LoL: Validate credentials
-    LoL-->>Partner: {access_token, expires_in, scope}
+    LoL-->>XM: {access_token, token_type, expires_in}
     
-    Note over Partner: Store token securely
+    Note over XM: Store token securely
     
     loop Every request
-        Partner->>LoL: API Request<br/>Authorization: Bearer {access_token}
+        XM->>LoL: API Request<br/>Authorization: Bearer {access_token}
         LoL->>LoL: Validate token & scopes
         alt Valid token and sufficient scopes
-            LoL-->>Partner: Response
+            LoL-->>XM: Response
         else Invalid/expired token
-            LoL-->>Partner: 401 Unauthorized
-            Partner->>LoL: POST /oauth2/token<br/>{client_id, client_secret, grant_type}
-            LoL-->>Partner: {new_access_token, expires_in}
-            Partner->>LoL: Retry API Request<br/>Authorization: Bearer {new_access_token}
-            LoL-->>Partner: Response
+            LoL-->>XM: 401 Unauthorized
+            XM->>LoL: POST /oauth2/token<br/>{client_id, client_secret, grant_type}
+            LoL-->>XM: {new_access_token, token_type, expires_in}
+            XM->>LoL: Retry API Request<br/>Authorization: Bearer {new_access_token}
+            LoL-->>XM: Response
         end
     end
 ```
 
-### Scope System
-
-Hierarchical permission structure:
-- Base: `public:read` (included in all tokens)
-- Hierarchy: `api:access` → `access` → `write` → `read`
-
-Available scopes:
-- `content:read` - Content access
-- `content_reviews:read` - Review access
-- `standards:read` - Standards access
-- `assignments:write` - Assignment management
-- `assignment_joins:write` - Assignment join management
-- `users:read/write` - User management
-- `searches:write` - Search functionality
-- `api:access` - Full access
-- `test:read` - Test endpoints
-
-### User Management
-- `GET /api/v3/users`
-- `POST /api/v3/users`
-- `GET /api/v3/users/:id`
-- `PUT /api/v3/users/:id`
-
-Key Features:
-- User creation is idempotent when using identical parameters
-- Username format: `{application.owner.code}-{application_user_id}`
-- Teacher users automatically get email: `{application.owner.code}-{application_user_id}@example.com`
-- Cannot update `application_user_id` after creation
-- Cannot change user role after creation
-- Each application can only access its own users
-
-### Assignment Management
-- `POST /api/v3/assignments`
-- `POST /api/v3/assignments/:id/joins`
-
-Key Features:
-- Assignment creation automatically creates an awakening activity of type "mastery"
-- Join URLs use a Redis-based token system
-- Join URL format: `/v3/join/{token}`
-- Join payload requires a "target" field (e.g. "awakening")
-
-### Content API
-Base URL: `/api/v3/content`
-Required Scope: `content:read`
-
-Content Review Visibility Rules:
-- Reviews from validated teachers are shown
-- Reviews from testers are shown
-- Reviews from manually approved teachers are not shown
-
-Review Stats Include:
-- `teacher_rating_avg`
-- `teacher_rating_count`
-- `student_rating_avg`
-- `student_rating_count`
-- `ease_of_play_avg`
-- `content_integration_avg`
-- `composite_rating_score`
-- `composite_rating_avg`
-- `suggested_use_summary`
-
-### Standards Management
-Base URL: `/api/v3/standard_sets`
-Required Scope: `standards:read`
-
-#### Endpoints
-
-1. **List Standard Sets**
-```http
-GET /api/v3/standard_sets
-```
-
-Query Parameters:
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| page | integer | 1 | Page number |
-| per_page | integer | 10 | Items per page |
-
-Response:
-```json
-{
-  "results": [
-    {
-      "id": "string",
-      "name": "string",
-      "subject_area": "string"
-    }
-  ],
-  "total_count": "integer",
-  "page": "integer",
-  "per_page": "integer"
-}
-```
-
-2. **List Standards for a Standard Set**
-```http
-GET /api/v3/standard_sets/:id/standards
-```
-
-Query Parameters:
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| page | integer | 1 | Page number |
-| page_size | integer | 30 | Items per page |
-| subject_id | integer | null | Filter by subject ID |
-
-Response:
-```json
-{
-  "entries": [
-    {
-      "id": "integer",
-      "learning_objective": "string",
-      "standard_code": "string",
-      "image_key": "string",
-      "image_url": "string",
-      "grades": [
-        {
-          "grade": "string"
-        }
-      ],
-      "subject": {
-        "id": "integer",
-        "name": "string",
-        "subject_area": "string",
-        "grade_level": "string"
-      }
-    }
-  ],
-  "meta": {
-    "total_count": "integer",
-    "total_pages": "integer",
-    "page": "integer",
-    "page_size": "integer"
-  }
-}
-```
-
-Error Responses:
-- 422: Unprocessable Entity
-  ```json
-  {
-    "error": {
-      "message": "Failed to fetch standards for set",
-      "details": "error details"
-    }
-  }
-  ```
-
-## Assignment API
+## Sample Scenario
 
 ### Overview
-The Assignment API provides endpoints for creating assignments and generating join URLs for students. This system replaces the previous launch system with a more direct two-step process:
+
+The Assignment API provides endpoints for creating assignments and generating join URLs for students:
 1. Create an assignment
 2. Generate join URLs for student access
 
@@ -289,89 +119,346 @@ The Assignment API provides endpoints for creating assignments and generating jo
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Users API
-    participant Assignments API
-    participant Redis
-    participant Experience
+    participant Teacher
+    participant Student
+    participant XtraMath Server
+    participant Legends of Learning Server
 
-    Note over Client, Experience: Step 1: Create Teacher
-    Client->>Users API: POST /api/v3/users
-    Note right of Client: {<br/>  "application_user_id": "teacher123",<br/>  "role": "teacher",<br/>  "first_name": "John",<br/>  "last_name": "Doe"<br/>}
-    Users API-->>Client: 201 Created (teacher user)
+    Note over Teacher, Legends of Learning Server: Step 1: Search for Standards
+    Teacher->>XtraMath Server: search for standards
+    XtraMath Server->>Legends of Learning Server: POST /api/v3/searches
+    Note left of Legends of Learning Server: {<br/>  "q": "addition",<br/>  "content_type": "standard",<br/>  "grade_levels": ["K", "1", "2"],<br/>  "page": 1,<br/>  "page_size": 10<br/>}
+    Legends of Learning Server-->>XtraMath Server: 200 OK (search results)
+    XtraMath Server-->>Teacher: list of standards
+    
+    Note over Teacher, Legends of Learning Server: Step 2: Create Assignment
+    Teacher->>XtraMath Server: create Awakening assignment
+    XtraMath Server->>Legends of Learning Server: POST /api/v3/users (if first time)
+    Note left of Legends of Learning Server: {<br/>  "application_user_id": "teacher123",<br/>  "role": "teacher",<br/>  "first_name": "John",<br/>  "last_name": "Doe"<br/>}
+    Legends of Learning Server-->>XtraMath Server: 201 Created
 
-    Note over Client, Experience: Step 2: Create Assignment
-    Client->>Assignments API: POST /api/v3/assignments
-    Note right of Client: {<br/>  "type": "standard",<br/>  "standard_id": 123,<br/>  "application_user_id": "teacher123"<br/>}
-    Assignments API->>Assignments API: Create mastery activity
-    Assignments API->>Assignments API: Create assignment
-    Assignments API-->>Client: 201 Created {assignment_id: 456}
+    XtraMath Server->>Legends of Learning Server: POST /api/v3/assignments
+    Note left of Legends of Learning Server: {<br/>  "type": "standard",<br/>  "standard_id": 123,<br/>  "application_user_id": "teacher123"<br/>}
+    Legends of Learning Server-->>XtraMath Server: 201 Created (assignment data, including ID)
+    XtraMath Server-->>Teacher: created Awakening assignment view
 
-    Note over Client, Experience: Step 3: Generate Join URL for Student
-    Client->>Users API: POST /api/v3/users
-    Note right of Client: {<br/>  "application_user_id": "student123",<br/>  "role": "student",<br/>  "first_name": "Jane",<br/>  "last_name": "Smith"<br/>}
-    Users API-->>Client: 201 Created (student user)
+    Teacher->>XtraMath Server: publish Awakening assignment to students
 
-    Client->>Assignments API: POST /api/v3/assignments/456/joins
-    Note right of Client: {<br/>  "application_user_id": "student123",<br/>  "target": "awakening"<br/>}
-    Assignments API->>Redis: Store join token (24h TTL)
-    Note right of Redis: Key: join_{token}<br/>Value: {<br/>  user_id: 789,<br/>  assignment_id: 456,<br/>  target: "awakening"<br/>}
-    Assignments API-->>Client: 201 Created {join_url: ".../v3/join/{token}"}
+    Note over Student, Legends of Learning Server: Step 3: Student Joins Assignment
+    XtraMath Server-->>Student: show awakening Assignment view to Student
+    Student->>XtraMath Server: play Awakening assignment
+    XtraMath Server->>Legends of Learning Server: POST /api/v3/users (if first time)
+    Note left of Legends of Learning Server: {<br/>  "application_user_id": "student123",<br/>  "role": "student",<br/>  "first_name": "Jane",<br/>  "last_name": "Doe"<br/>}
+    Legends of Learning Server-->>XtraMath Server: 201 Created
 
-    Note over Client, Experience: Step 4: Student Joins
-    Client->>Experience: GET /v3/join/{token}
-    Experience->>Redis: Get token data
-    Redis-->>Experience: Token data
-    Experience->>Experience: Validate user & assignment
-    Experience-->>Client: 302 Redirect to awakening
+    XtraMath Server->>Legends of Learning Server: POST /api/v3/assignments/{assignment_id}/joins
+    Note left of Legends of Learning Server: {<br/>  "application_user_id": "student123",<br/>  "target": "awakening"<br/>}
+    Legends of Learning Server-->>XtraMath Server: 201 Created (join URL)
+    XtraMath Server-->>Student: redirect to or embed frame with join URL
 ```
 
-### Endpoints
+## API Reference
 
-1. **Create Assignment**
+### OAuth
+
+#### <span style="color: #F07000;">POST</span> /api/v3/oauth2/token
+
+##### Description
+
+This endpoint is used to obtain an OAuth 2.0 access token for the Legends of Learning API.
+
+##### Example
+
 ```http
-POST /api/v3/assignments
+POST /api/v3/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=client_credentials&
+client_id=YOUR_CLIENT_ID&
+client_secret=YOUR_CLIENT_SECRET
 ```
 
-Required Scope: `assignments:write`
-
-Request Body:
 ```json
 {
-  "type": "standard",
-  "standard_id": "integer",
-  "application_user_id": "string"
+  "access_token": "YOUR_ACCESS_TOKEN",
+  "token_type": "bearer",
+  "expires_in": 3600
 }
 ```
 
-Response (201 Created):
-```json
-{
-  "assignment_id": "integer"
-}
-```
+##### Body
 
-2. **Create Join URL**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| client_id | string | Yes | The client ID provided during application registration |
+| client_secret | string | Yes | The client secret provided during application registration |
+| grant_type | string | Yes | Must be set to "client_credentials" for this flow |
+
+##### Response
+
+HTTP/1.1 200 OK
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| access_token | string | The access token |
+| token_type | string | The type of token (always "bearer") |
+| expires_in | integer | The number of seconds the token will remain valid |
+
+#### <span style="color: #F07000;">POST</span> /api/v3/oauth2/revoke
+
+##### Description
+
+This endpoint is used to revoke an OAuth 2.0 access token.
+
+##### Example
+
 ```http
-POST /api/v3/assignments/:id/joins
+POST /api/v3/oauth2/revoke
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Accept: application/json
 ```
 
-Required Scope: `assignment_joins:write`
-
-Request Body:
 ```json
+{}
+```
+
+##### Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| token | string | Yes | The token to revoke |
+
+##### Response
+
+HTTP/1.1 200 OK
+
+The response is an empty JSON object.
+
+### Search
+
+#### <span style="color: #F07000;">POST</span> /api/v3/searches
+
+##### Description
+
+This endpoint is used to search for standards.
+
+##### Example
+
+```http
+POST /api/v3/searches
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+Accept: application/json
+
 {
-  "application_user_id": "string",
-  "target": "awakening"
+  "q": "addition",
+  "content_type": "standard",
+  "grade_levels": ["K", "1", "2"],
+  "page": 1,
+  "page_size": 1
 }
 ```
 
-Response (201 Created):
 ```json
 {
-  "join_url": "string"
+  "total_count": 20,
+  "page": 1,
+  "hits": [
+    {
+      "data": {
+        "content_type": {
+          "id": 4086,
+          "name": "Addition and Subtraction Word Problems",
+          "description": "Solve addition and subtraction word problems, and add and subtract within 10, e.g., by using objects or drawings to represent the problem.",
+          "image": "4.NF.A.2",
+          "standard": [
+            "CCSS"
+          ],
+          "grades": [
+            "k"
+          ],
+          "subject_area": [],
+          "standard_code": "K.OA.A.2"
+        }
+      },
+      "id": "f6c95fcd-0601-4f8c-86f5-871d8fe8f10c",
+      "content_type": "standard",
+      "highlights": [
+        {
+          "field": "name",
+          "snippets": [],
+          "indices": null
+        },
+        {
+          "field": "learning_objective.name[CCSS]",
+          "snippets": [],
+          "indices": null
+        },
+        {
+          "field": "learning_objective.description[CCSS]",
+          "snippets": [],
+          "indices": null
+        }
+      ]
+    }
+  ],
+  "per_page": 1
 }
 ```
+
+##### Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| q | string | Yes | The search query |
+| content_type | string | Yes | The content type to search for ("standard") |
+| grade_levels | array | Yes | The grade levels to search for (e.g. ["K", "1", "2"], max grade level is "9") |
+| page | integer | Yes | The page number to return |
+| page_size | integer | No | The number of results per page (default is 10) |
+
+##### Response
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| total_count | integer | The total number of results |
+| page | integer | The page number |
+| per_page | integer | The number of results per page |
+| hits | array[hit] | The list of search results |
+
+###### hit
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| data | object | The details of the search result; for standards, see [standard](#standard) |
+| id | string | The ID of the search result |
+| content_type | string | The content type of the search result (e.g. "standard") |
+| highlights | array[highlight] | The parts of the search result that matched the query |
+
+###### highlight
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| field | string | The field that matched the query |
+| snippets | array[snippet] | HTML snippets for the highlighting what matched out of the field text; snippets are not always provided |
+| indices | array[integer] | When the field is an array of strings, this is the index of the string that matched the query |
+
+###### snippet
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| snippet | string | HTML text with highlights applied to the tokens that matched the query |
+| matched_tokens | array[string] | The tokens that matched the query |
+
+###### standard
+
+This data resides under the key `content_type` within the `data` object.
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| id | string | The ID of the standard |
+| name | string | The name of the standard |
+| description | string | The description of the standard |
+| image | string | A key name for retrieving an image representing the standard from Legends of Learning's content site |
+| standard | array[string] | The standard sets that the standard belongs to (e.g. ["CCSS"]) |
+| grades | array[string] | The grades that the standard belongs to (e.g. ["k", "1"]) |
+| subject_area | array[string] | The subject areas that the standard covers (e.g. ["math", "science"]; this is not always populated) |
+| standard_code | string | The code of the standard (e.g. "K.OA.A.2") |
+
+
+### Standards
+
+#### <span style="color: #00F070;">GET</span> /api/v3/standard_sets
+
+##### Description
+
+This endpoint is used to retrieve a list of standard sets.
+
+##### Example
+
+```http
+GET /api/v3/standard_sets?per_page=2
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Accept: application/json
+```
+
+```json
+{
+  "total_count": 53,
+  "page": 1,
+  "per_page": 2,
+  "results": [
+    {
+      "id": "AL Math",
+      "name": "Alabama Math",
+      "subject_area": "math"
+    },
+    {
+      "id": "AL Science",
+      "name": "Alabama Science",
+      "subject_area": "science"
+    }
+  ]
+}
+```
+
+##### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| per_page | integer | No | The number of results per page (default is 10) |
+| page | integer | No | The page number to return (default is 1) |
+| subject_area | string | No | The subject area to filter by (e.g. "math", "science") (default is all subject areas) |
+
+##### Response
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| total_count | integer | The total number of results |
+| page | integer | The page number |
+| per_page | integer | The number of results per page |
+| results | array[standard_set] | The list of standard sets |
+
+###### standard_set
+
+| Field | Type | Description |
+|-----------|------|-------------|
+| id | string | The ID of the standard set |
+| name | string | The display name of the standard set |
+| subject_area | string | The subject area of the standard set |
+
+#### <span style="color: #00F070;">GET</span> /api/v3/standard_sets/:id/standards
+
+##### Description
+
+This endpoint is used to retrieve a list of standards for a given standard set.
+
+
+
+### Content
+
+#### <span style="color: #00F070;">GET</span> /api/v3/content
+
+#### <span style="color: #00F070;">GET</span> /api/v3/content/:id
+
+#### <span style="color: #00F070;">GET</span> /api/v3/content/:id/reviews
+
+### Users
+
+#### <span style="color: #00F070;">GET</span> /api/v3/users
+
+#### <span style="color: #F07000;">POST</span> /api/v3/users
+
+#### <span style="color: #00F070;">GET</span> /api/v3/users/:id
+
+#### <span style="color: #F07000;">PUT</span> /api/v3/users/:id
+
+### Assignments
+
+#### <span style="color: #F07000;">POST</span> /api/v3/assignments
+
+#### <span style="color: #F07000;">POST</span> /api/v3/assignments/:id/joins
+
 
 ### Assignment Creation
 

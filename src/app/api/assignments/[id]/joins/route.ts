@@ -1,103 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { API_CONFIG } from '@/config/api';
 
-// Get the API base URL from environment variables
-const LEGENDS_API_BASE_URL = process.env.LEGENDS_API_BASE_URL || 'https://api.legendsoflearning.com/api/v3';
-
-// Function to get a valid token from the proxy endpoint with retry
-async function getToken(retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      // Use our own proxy to get a token
-      const response = await axios.get('/api/token');
-      return response.data.access_token;
-    } catch (error) {
-      console.error(`Failed to get token (attempt ${attempt}/${retries}):`, error);
-      if (attempt === retries) throw error;
-      // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-    }
-  }
-}
-
-// Function to make API request with retry
-async function makeApiRequest(
-  url: string, 
-  method: string, 
-  data: any, 
-  headers: Record<string, string>, 
-  retries = 3
-) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await axios({
-        method,
-        url,
-        data,
-        headers,
-        timeout: 10000 // 10 second timeout
-      });
-    } catch (error: any) {
-      console.error(`API request failed (attempt ${attempt}/${retries}):`, error.message);
-      
-      // If it's a connection reset error, retry
-      const isConnectionReset = 
-        error.code === 'ECONNRESET' || 
-        error.message?.includes('ECONNRESET') ||
-        error.message?.includes('socket hang up');
-      
-      if (attempt === retries || !isConnectionReset) throw error;
-      
-      // Wait before retrying (exponential backoff)
-      const delay = 1000 * Math.pow(2, attempt - 1);
-      console.log(`Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  // This should never be reached due to the throw in the loop,
-  // but TypeScript needs it for type safety
-  throw new Error('Failed after all retries');
-}
-
-// Function to ensure a user exists
-async function ensureUserExists(applicationUserId: string, role: string, firstName: string, lastName: string) {
-  console.log(`Ensuring user exists: ${applicationUserId} (${role})`);
-  
-  try {
-    // First try to get the user
-    const response = await axios.get(`/api/users?application_user_id=${applicationUserId}`);
-    const users = response.data.users;
-    
-    if (users && users.length > 0) {
-      console.log(`User ${applicationUserId} already exists`);
-      return users[0];
-    }
-  } catch (error) {
-    console.log(`User ${applicationUserId} not found, will create`);
-  }
-  
-  // User doesn't exist, create it
-  try {
-    const createResponse = await axios.post('/api/users', {
-      application_user_id: applicationUserId,
-      role,
-      first_name: firstName,
-      last_name: lastName
-    });
-    
-    console.log(`User ${applicationUserId} created successfully`);
-    return createResponse.data;
-  } catch (error: any) {
-    // If error contains "User already exists" then it's fine, just get the user
-    if (error.response?.data?.error?.includes('User already exists')) {
-      console.log(`User ${applicationUserId} already exists (from error)`);
-      const response = await axios.get(`/api/users?application_user_id=${applicationUserId}`);
-      return response.data.users[0];
-    }
-    
-    console.error(`Failed to create user ${applicationUserId}:`, error.response?.data || error.message);
-    throw error;
-  }
+// Helper function to implement exponential backoff
+async function delay(attempt: number) {
+  const baseDelay = API_CONFIG.REQUEST.BASE_DELAY;
+  const maxDelay = API_CONFIG.REQUEST.MAX_DELAY;
+  const delayMs = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+  await new Promise(resolve => setTimeout(resolve, delayMs));
 }
 
 // POST handler for creating assignment joins
@@ -106,9 +16,17 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Get token from cookie
+    const token = request.cookies.get('auth_token')?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const assignmentId = params.id;
     const body = await request.json();
-    console.log(`Join request for assignment ${assignmentId}:`, body);
     
     // Validate required fields
     if (!body.application_user_id) {
@@ -118,48 +36,82 @@ export async function POST(
       );
     }
     
-    // Ensure the student exists
-    await ensureUserExists(
-      body.application_user_id,
-      'student',
-      body.student_first_name || 'Demo',
-      body.student_last_name || 'Student'
-    );
-    
-    // Forward the request to the Legends API with retry
-    const token = await getToken();
-    
-    try {
-      const response = await makeApiRequest(
-        `${LEGENDS_API_BASE_URL}/assignments/${assignmentId}/joins`,
-        'post',
-        {
-          application_user_id: body.application_user_id,
-          target: body.target || 'awakening'
-        },
-        {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      );
-      
-      console.log('Join URL created successfully:', response.data);
-      return NextResponse.json(response.data, { status: 201 });
-    } catch (error: any) {
-      if (error.code === 'ECONNRESET' || error.message?.includes('ECONNRESET')) {
-        console.error('Connection reset error when creating join URL:', error);
-        return NextResponse.json(
-          { 
-            error: 'Connection to the API server was reset. Please try again.',
-            details: { code: error.code, message: error.message }
-          },
-          { status: 503 }
+    // First ensure the student exists
+    let attempt = 0;
+    while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
+      try {
+        await axios.get(
+          `${API_CONFIG.BASE_URL}/users/${body.application_user_id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          }
         );
+        break;
+      } catch (error: any) {
+        // If user doesn't exist, create them
+        if (error.response?.status === 404) {
+          await axios.post(
+            `${API_CONFIG.BASE_URL}/users`,
+            {
+              application_user_id: body.application_user_id,
+              role: 'student',
+              first_name: body.student_first_name || 'Demo',
+              last_name: body.student_last_name || 'Student',
+              email: `${body.application_user_id}@example.com`
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              }
+            }
+          );
+          break;
+        }
+        
+        // Handle connection reset errors with retry
+        if (error.code === 'ECONNRESET' && attempt < API_CONFIG.REQUEST.MAX_RETRIES - 1) {
+          await delay(attempt);
+          attempt++;
+          continue;
+        }
+        throw error;
       }
-      throw error;
+    }
+
+    // Create the join URL
+    attempt = 0;
+    while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
+      try {
+        const response = await axios.post(
+          `${API_CONFIG.BASE_URL}/assignments/${assignmentId}/joins`,
+          {
+            application_user_id: body.application_user_id,
+            target: body.target || 'awakening'
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+        
+        return NextResponse.json(response.data, { status: 201 });
+      } catch (error: any) {
+        if (error.code === 'ECONNRESET' && attempt < API_CONFIG.REQUEST.MAX_RETRIES - 1) {
+          await delay(attempt);
+          attempt++;
+          continue;
+        }
+        throw error;
+      }
     }
   } catch (error: any) {
-    console.error('Failed to create join URL:', error);
+    console.error('Failed to create join URL:', error.response?.data || error);
     
     return NextResponse.json(
       { 

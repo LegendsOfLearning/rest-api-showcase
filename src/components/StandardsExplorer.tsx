@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import LaunchModal from './LaunchModal'
 import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
+import SubjectSelector from './SubjectSelector'
 
 type Standard = {
   id: number
@@ -22,22 +24,40 @@ type StandardSet = {
 
 type StandardsExplorerProps = {
   standardSet?: string
+  subject: string
 }
 
-export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExplorerProps) {
+export default function StandardsExplorer({ standardSet = 'ngss', subject }: StandardsExplorerProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   // State management
   const [standardSets, setStandardSets] = useState<StandardSet[]>([])
   const [standards, setStandards] = useState<Standard[]>([])
-  const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(() => {
+    // Initialize from localStorage if available, filtered by subject
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('selectedStandardSet')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (parsed.subject === subject) {
+            return parsed.setId
+          }
+        } catch (e) {
+          console.error('Error parsing stored standard set:', e)
+        }
+      }
+    }
+    return null
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [standardType, setStandardType] = useState<'NGSS' | 'CCSS'>('NGSS')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedStandardId, setSelectedStandardId] = useState<string | null>(null)
+  const [selectedStandardName, setSelectedStandardName] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [subject, setSubject] = useState<string>('science')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Fetch standard sets
@@ -46,12 +66,16 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
       try {
         setLoading(true)
         // Use the standard_sets API endpoint
-        const response = await axios.get('/api/standard_sets')
+        const response = await axios.get('/api/standard_sets', {
+          params: {
+            per_page: 1000 // Use per_page instead of page_size
+          }
+        })
         
         if (response.data && response.data.results) {
-          // Filter for NGSS or CCSS based on standardType
+          // Filter by subject area
           const filteredSets = response.data.results.filter((set: StandardSet) => 
-            set.name.includes(standardType)
+            set.subject_area.toLowerCase() === subject.toLowerCase()
           )
           
           setStandardSets(filteredSets)
@@ -76,7 +100,7 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
     }
 
     fetchStandardSets()
-  }, [standardType])
+  }, [subject])
 
   // Fetch standards for selected set
   useEffect(() => {
@@ -117,16 +141,10 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
     fetchStandards();
   }, [selectedSetId, page]);
 
-  // Filter standards based on search term
-  const filteredStandards = standards.filter(standard => 
-    standard.learning_objective.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (standard.standard_code && standard.standard_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (standard.ngss_dci_name && standard.ngss_dci_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
   // Handle standard launch
-  const handleLaunchStandard = (standardId: string) => {
-    setSelectedStandardId(standardId)
+  const handleLaunchStandard = (standard: Standard) => {
+    setSelectedStandardId(standard.id.toString())
+    setSelectedStandardName(standard.ngss_dci_name || standard.learning_objective)
     setIsModalOpen(true)
   }
 
@@ -134,6 +152,7 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedStandardId(null)
+    setSelectedStandardName(null)
   }
 
   // Handle page change
@@ -146,14 +165,11 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
   // Handle standard set change
   const handleStandardSetChange = (setId: string) => {
     setSelectedSetId(setId)
+    // Store in localStorage with subject
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedStandardSet', JSON.stringify({ setId, subject }))
+    }
     setPage(1) // Reset to first page when changing standard set
-  }
-
-  // Handle standard type change
-  const handleStandardTypeChange = (type: 'NGSS' | 'CCSS') => {
-    setStandardType(type)
-    setSelectedSetId(null) // Reset selected set
-    setPage(1) // Reset to first page
   }
 
   return (
@@ -189,32 +205,19 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
       </div>
 
       <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Standard Type Selector */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Subject Area */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Standard Type</label>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handleStandardTypeChange('NGSS')}
-                className={`px-4 py-2 rounded-md flex-1 transition-colors duration-200 ${
-                  standardType === 'NGSS' 
-                    ? 'bg-indigo-600 text-white shadow-sm' 
-                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                }`}
-              >
-                NGSS
-              </button>
-              <button
-                onClick={() => handleStandardTypeChange('CCSS')}
-                className={`px-4 py-2 rounded-md flex-1 transition-colors duration-200 ${
-                  standardType === 'CCSS' 
-                    ? 'bg-indigo-600 text-white shadow-sm' 
-                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                }`}
-              >
-                CCSS
-              </button>
-            </div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Subject Area</label>
+            <SubjectSelector 
+              currentSubject={subject} 
+              standardSets
+              onSubjectChange={(newSubject) => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('subject', newSubject);
+                router.push(`/standards?${params.toString()}`);
+              }}
+            />
           </div>
           
           {/* Standard Set Selector */}
@@ -228,29 +231,10 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
               <option value="" disabled>Select a standard set</option>
               {standardSets.map((set) => (
                 <option key={set.id} value={set.id}>
-                  {set.name} - {set.subject_area}
+                  {set.name}
                 </option>
               ))}
             </select>
-          </div>
-          
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Search Standards</label>
-            <div className="relative rounded-md shadow-sm">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by standard code or description..."
-                className="block w-full rounded-md border-slate-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
           </div>
         </div>
         
@@ -268,9 +252,9 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
         )}
         
         {/* Standards Grid/List View */}
-        {!loading && !error && filteredStandards.length > 0 && (
+        {!loading && !error && standards.length > 0 && (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-5'}>
-            {filteredStandards.map((standard) => (
+            {standards.map((standard) => (
               <div 
                 key={standard.id}
                 className={`
@@ -315,7 +299,7 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
                         {standard.learning_objective}
                       </p>
                       <button
-                        onClick={() => handleLaunchStandard(standard.id.toString())}
+                        onClick={() => handleLaunchStandard(standard)}
                         className="w-full inline-flex justify-center items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                       >
                         Launch Standard
@@ -347,7 +331,7 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
                         {standard.learning_objective}
                       </p>
                       <button
-                        onClick={() => handleLaunchStandard(standard.id.toString())}
+                        onClick={() => handleLaunchStandard(standard)}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                       >
                         Launch Standard
@@ -361,20 +345,20 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
         )}
         
         {/* Empty State */}
-        {!loading && !error && filteredStandards.length === 0 && (
+        {!loading && !error && standards.length === 0 && (
           <div className="text-center py-16 bg-slate-50 rounded-lg border border-slate-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-16 w-16 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h3 className="mt-4 text-lg font-medium text-slate-900">No standards found</h3>
             <p className="mt-2 text-base text-slate-600 max-w-md mx-auto">
-              Try changing your search criteria or selecting a different standard set.
+              Try selecting a different standard set.
             </p>
           </div>
         )}
         
         {/* Pagination */}
-        {!loading && !error && filteredStandards.length > 0 && totalPages > 1 && (
+        {!loading && !error && standards.length > 0 && totalPages > 1 && (
           <div className="flex justify-center mt-10">
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button
@@ -393,19 +377,82 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
               </button>
               
               {/* Page Numbers */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                    page === pageNum
-                      ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                      : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              ))}
+              {(() => {
+                const pageNumbers = [];
+                const maxVisible = 5; // Maximum number of visible page numbers
+                const halfVisible = Math.floor(maxVisible / 2);
+                
+                let startPage = Math.max(1, page - halfVisible);
+                let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                
+                // Adjust start if we're near the end
+                if (endPage === totalPages) {
+                  startPage = Math.max(1, endPage - maxVisible + 1);
+                }
+                
+                // Add first page
+                if (startPage > 1) {
+                  pageNumbers.push(
+                    <button
+                      key={1}
+                      onClick={() => handlePageChange(1)}
+                      className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+                    >
+                      1
+                    </button>
+                  );
+                  
+                  // Add ellipsis if there's a gap
+                  if (startPage > 2) {
+                    pageNumbers.push(
+                      <span key="start-ellipsis" className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-slate-300 text-slate-600">
+                        ...
+                      </span>
+                    );
+                  }
+                }
+                
+                // Add visible page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                  pageNumbers.push(
+                    <button
+                      key={i}
+                      onClick={() => handlePageChange(i)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        page === i
+                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+                
+                // Add last page
+                if (endPage < totalPages) {
+                  // Add ellipsis if there's a gap
+                  if (endPage < totalPages - 1) {
+                    pageNumbers.push(
+                      <span key="end-ellipsis" className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-slate-300 text-slate-600">
+                        ...
+                      </span>
+                    );
+                  }
+                  
+                  pageNumbers.push(
+                    <button
+                      key={totalPages}
+                      onClick={() => handlePageChange(totalPages)}
+                      className="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+                
+                return pageNumbers;
+              })()}
               
               <button
                 onClick={() => handlePageChange(page + 1)}
@@ -432,6 +479,9 @@ export default function StandardsExplorer({ standardSet = 'ngss' }: StandardsExp
           contentId={selectedStandardId} 
           contentType="standard"
           onClose={handleCloseModal} 
+          standardSetId={selectedSetId || ''}
+          standardName={selectedStandardName || undefined}
+          standardCode={standards.find(s => s.id.toString() === selectedStandardId)?.standard_code}
         />
       )}
     </div>

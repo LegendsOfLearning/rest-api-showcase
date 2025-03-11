@@ -8,17 +8,45 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Add custom colors if needed
+        primary: {
+          DEFAULT: '#0070f3',
+          dark: '#0051cc',
+        },
+        background: {
+          light: 'rgb(var(--background-start-rgb))',
+          dark: 'rgb(var(--background-end-rgb))',
+        },
+        text: {
+          DEFAULT: 'rgb(var(--foreground-rgb))',
+        }
       },
-      borderRadius: {
-        // Add custom border radius if needed
+      fontFamily: {
+        sans: [
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'Noto Sans',
+          'sans-serif',
+        ],
       },
-      boxShadow: {
-        // Add custom shadows if needed
+      container: {
+        center: true,
+        padding: '1rem',
+        screens: {
+          sm: '640px',
+          md: '768px',
+          lg: '1024px',
+          xl: '1280px',
+        },
       },
     },
   },
   plugins: [
     require('@tailwindcss/forms'),
   ],
+  darkMode: 'media',  // or 'class' if you want to implement manual dark mode toggle
 } 

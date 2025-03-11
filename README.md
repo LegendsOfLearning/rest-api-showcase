@@ -1,93 +1,80 @@
-# Legends of Learning API Demo
+# Legends of Learning REST API Demo
 
-A simple demo application showcasing integration with the Legends of Learning API. This project demonstrates OAuth 2.0 authentication and API proxying for Legends of Learning endpoints.
+This is a simple demo application showcasing how to interact with the Legends of Learning REST API using Next.js 14.
 
 ## Features
 
-- OAuth 2.0 two-legged authentication
-- API proxying for Legends of Learning public endpoints
-- Simple frontend interface to explore the API
-- Standard assignment creation and launch URL generation
-- Robust error handling for user creation
-- Search API integration for content discovery
-- Embedding options for join URLs with iframe preview
+- Modern React with Next.js 14
+- Server-side API proxying for security
+- Client-side authentication with OAuth 2.0
+- TypeScript for type safety
+- Tailwind CSS for styling
+- ESLint and Prettier for code quality
 
-## Recent Updates
+## Prerequisites
 
-- Added Search API integration for content discovery
-- Added embedding options for join URLs with iframe preview
-- Added student join URL generation to AssignmentCreator
-- Changed terminology from "Launch Game" to "Launch Standard" to align with API documentation
-- Improved error handling for user creation to handle "User already exists with different params" errors
-- Updated UI to reflect the correct terminology throughout the application
+- Node.js 18.17 or later
+- npm or yarn
+- A Legends of Learning account with API access
 
-## Setup
+## Getting Started
 
-1. Clone the repository
-2. Create a `.env` file with your credentials (copy from `.env.example`):
-```
-LEGENDS_API_BASE_URL=https://api.legendsoflearning.com/api/v3
-LEGENDS_CLIENT_ID=your_client_id
-LEGENDS_CLIENT_SECRET=your_client_secret
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/lol-rest-api-demo.git
+   cd lol-rest-api-demo
+   ```
 
-3. Install dependencies:
-```bash
-npm install
-```
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Create a `.env` file in the root directory:
+   ```
+   LEGENDS_API_BASE_URL=https://api.smartlittlecookies.com/api/v3
+   INTERNAL_API_BASE_URL=http://localhost:3000
+   ```
 
 4. Start the development server:
-```bash
-npm run dev
-```
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-## Project Structure
-
-```
-├── src/
-│   ├── pages/
-│   │   ├── api/    # API proxy routes
-│   │   └── index.tsx # Main page
-│   └── components/ # React components
-├── .env           # Environment variables (gitignored)
-├── .env.example   # Example environment variables
-└── package.json
-```
-
-## API Routes
-
-The server proxies the following Legends of Learning endpoints:
-
-- `/api/content` - List and search content
-- `/api/assignments` - Create assignments
-- `/api/join` - Generate join URLs
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
 
-- `LEGENDS_API_BASE_URL` - Base URL for the Legends of Learning API
-- `LEGENDS_CLIENT_ID` - Your Legends of Learning client ID
-- `LEGENDS_CLIENT_SECRET` - Your Legends of Learning client secret
+Required environment variables:
 
-## Deployment to Vercel
+- `LEGENDS_API_BASE_URL` - The base URL for the Legends of Learning API
+- `INTERNAL_API_BASE_URL` - The base URL for the internal API (usually http://localhost:3000)
 
-This project is configured for easy deployment to Vercel:
+## Authentication
 
-1. Push your code to a Git repository
-2. Connect the repository to Vercel
-3. Add the environment variables in the Vercel dashboard:
-   - `LEGENDS_API_BASE_URL`
-   - `LEGENDS_CLIENT_ID`
-   - `LEGENDS_CLIENT_SECRET`
-4. Deploy
+This application uses OAuth 2.0 client credentials flow for authentication. You'll need to:
 
-Vercel will automatically pick up the environment variables from your Vercel project settings for each deployment.
+1. Log in to your Legends of Learning account
+2. Navigate to the API settings page
+3. Generate API credentials (Client ID and Client Secret)
+4. Enter these credentials in the application's login form
 
-## Security
+## API Documentation
 
-- Environment variables are never exposed to the client
-- OAuth token management is handled server-side
-- All API requests are proxied through the backend
+For detailed information about the Legends of Learning API, please refer to the [official API documentation](https://docs.legendsoflearning.com/api/).
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
