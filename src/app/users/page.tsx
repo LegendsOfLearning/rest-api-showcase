@@ -1,85 +1,116 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import axios from 'axios'
-import Layout from '../components/Layout'
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import axios from 'axios';
+import UserCreationForm from '../../components/UserCreationForm';
 
 type User = {
-  id: number
-  application_user_id: string
-  role: 'teacher' | 'student'
-  first_name: string
-  last_name: string
-  email?: string
-  created_at: string
-  updated_at: string
-}
+  id: number;
+  application_user_id: string;
+  role: 'teacher' | 'student';
+  first_name: string;
+  last_name: string;
+  email?: string;
+  created_at: string;
+  updated_at: string;
+};
 
 export default function UsersPage() {
-  const router = useRouter()
-  const { role = '', page: pageParam = '1' } = router.query
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const roleParam = searchParams?.get('role') || '';
+  const pageParam = searchParams?.get('page') || '1';
   
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(parseInt(pageParam as string) || 1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [roleFilter, setRoleFilter] = useState<string>(role as string)
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(parseInt(pageParam) || 1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [roleFilter, setRoleFilter] = useState<string>(roleParam);
   
   // Update URL when state changes
   useEffect(() => {
-    const query: Record<string, string> = { page: page.toString() }
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
     
     if (roleFilter) {
-      query.role = roleFilter
+      params.set('role', roleFilter);
     }
     
-    router.push({
-      pathname: '/users',
-      query
-    }, undefined, { shallow: true })
-  }, [page, roleFilter, router])
+    router.push(`/users?${params.toString()}`);
+  }, [page, roleFilter, router]);
   
   // Update state when URL parameters change
   useEffect(() => {
     if (pageParam) {
-      setPage(parseInt(pageParam as string) || 1)
+      setPage(parseInt(pageParam) || 1);
     }
     
-    if (role) {
-      setRoleFilter(role as string)
+    if (roleParam) {
+      setRoleFilter(roleParam);
     }
-  }, [pageParam, role])
+  }, [pageParam, roleParam]);
   
   const fetchUsers = async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       
-      const params: Record<string, any> = { page }
+      const params: Record<string, any> = { page };
       
       if (roleFilter) {
-        params.role = roleFilter
+        params.role = roleFilter;
       }
       
-      const response = await axios.get('/api/users', { params })
+      const response = await axios.get('/api/users', { params });
       
-      setUsers(response.data.entries || [])
-      setTotalPages(response.data.total_pages || 1)
+      setUsers(response.data.users || []);
+      setTotalPages(response.data.total_pages || 1);
     } catch (err: any) {
-      console.error('Error fetching users:', err)
-      setError(`Error: ${err.response?.data?.error || err.message || 'Unknown error'}`)
+      console.error('Error fetching users:', err);
+      setError(`Error: ${err.response?.data?.error || err.message || 'Unknown error'}`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
   
   useEffect(() => {
-    fetchUsers()
-  }, [page, roleFilter])
+    fetchUsers();
+  }, [page, roleFilter]);
+  
+  // Format date safely
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    
+    try {
+      // Try to parse the date
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return dateString; // Return the original string if parsing failed
+      }
+      
+      // Format the date
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return the original string if an error occurred
+    }
+  };
   
   return (
-    <Layout>
-      <div className="bg-white shadow-sm rounded-lg p-6">
+    <div className="w-full">
+      {/* User Creation Form */}
+      <UserCreationForm onUserCreated={fetchUsers} />
+      
+      {/* User List */}
+      <div className="bg-white shadow-sm rounded-lg p-6 w-full">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">User Management</h2>
         
         <div className="mb-6">
@@ -182,7 +213,7 @@ export default function UsersPage() {
                           {user.email || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString()}
+                          {formatDate(user.created_at)}
                         </td>
                       </tr>
                     ))}
@@ -228,6 +259,6 @@ export default function UsersPage() {
           </>
         )}
       </div>
-    </Layout>
-  )
+    </div>
+  );
 } 

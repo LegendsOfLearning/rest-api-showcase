@@ -194,15 +194,89 @@ Review Stats Include:
 Base URL: `/api/v3/standard_sets`
 Required Scope: `standards:read`
 
-Standard Set Structure:
-- Standard Sets have a `public` boolean field
-- Standards are organized by subjects with:
-  - `subject_area`
-  - `grade_level`
-- Learning objectives include:
-  - `question_count`
-  - `image_key`
-  - `ngss_dci_name`
+#### Endpoints
+
+1. **List Standard Sets**
+```http
+GET /api/v3/standard_sets
+```
+
+Query Parameters:
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | integer | 1 | Page number |
+| per_page | integer | 10 | Items per page |
+
+Response:
+```json
+{
+  "results": [
+    {
+      "id": "string",
+      "name": "string",
+      "subject_area": "string"
+    }
+  ],
+  "total_count": "integer",
+  "page": "integer",
+  "per_page": "integer"
+}
+```
+
+2. **List Standards for a Standard Set**
+```http
+GET /api/v3/standard_sets/:id/standards
+```
+
+Query Parameters:
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | integer | 1 | Page number |
+| page_size | integer | 30 | Items per page |
+| subject_id | integer | null | Filter by subject ID |
+
+Response:
+```json
+{
+  "entries": [
+    {
+      "id": "integer",
+      "learning_objective": "string",
+      "standard_code": "string",
+      "image_key": "string",
+      "image_url": "string",
+      "grades": [
+        {
+          "grade": "string"
+        }
+      ],
+      "subject": {
+        "id": "integer",
+        "name": "string",
+        "subject_area": "string",
+        "grade_level": "string"
+      }
+    }
+  ],
+  "meta": {
+    "total_count": "integer",
+    "total_pages": "integer",
+    "page": "integer",
+    "page_size": "integer"
+  }
+}
+```
+
+Error Responses:
+- 422: Unprocessable Entity
+  ```json
+  {
+    "error": {
+      "message": "Failed to fetch standards for set",
+      "details": "error details"
+    }
+  }
+  ```
 
 ## Assignment API
 
@@ -727,3 +801,93 @@ Note: OPTIONS endpoint disabled for this route
 
 ### Standards Management
 Base URL: `/api/v3/standard_sets`
+
+### Search API
+Base URL: `/api/v3/searches`
+Required Scope: `searches:write`
+
+#### Endpoints
+
+1. **Global Search**
+```http
+POST /api/v3/searches
+```
+
+Request Body:
+```json
+{
+  "q": "string",
+  "content_type": "game|video|standard",
+  "game_types": ["instructional", "quiz", "simulation"],
+  "grade_levels": ["K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+  "subject_areas": ["math", "science"],
+  "standard_set": "string",
+  "max_lexile_level": "integer",
+  "page": "integer",
+  "page_size": "integer"
+}
+```
+
+Parameters:
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| q | string | "" | Search query term |
+| content_type | enum | "game" | Type of content to search for (game, video, standard) |
+| game_types | array[enum] | [] | Filter by game types (instructional, quiz, simulation) |
+| grade_levels | array[enum] | [] | Filter by grade levels (K, 1-12) |
+| subject_areas | array[enum] | [] | Filter by subject areas (math, science) |
+| standard_set | string | null | Filter by standard set |
+| max_lexile_level | integer | null | Maximum lexile level |
+| page | integer | 1 | Page number |
+| page_size | integer | 10 | Items per page |
+
+Response:
+```json
+{
+  "hits": [
+    {
+      "content_type": "game",
+      "id": "integer",
+      "data": {
+        "content_type": {
+          "id": "integer",
+          "name": "string",
+          "description": "string",
+          "thumbnail_url": "string",
+          "grade_levels": ["string"],
+          "subject_areas": ["string"],
+          "game_type": "string",
+          "content_type": "string",
+          "lexile_level": "string"
+        }
+      },
+      "highlights": {
+        "field": "string",
+        "snippets": [
+          {
+            "snippet": "string",
+            "matched_tokens": ["string"]
+          }
+        ],
+        "indices": ["integer"]
+      }
+    }
+  ],
+  "total_count": "integer",
+  "page": "integer",
+  "per_page": "integer"
+}
+```
+
+Error Responses:
+- 422: Invalid parameters
+  ```json
+  {
+    "error": {
+      "message": "Invalid parameters provided",
+      "details": {
+        "unexpected_parameters": ["parameter_name"]
+      }
+    }
+  }
+  ```
