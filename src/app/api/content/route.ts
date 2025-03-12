@@ -18,6 +18,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Get the authorization header from the request

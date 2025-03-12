@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
 
+export const dynamic = 'force-dynamic';
+
 const LEGENDS_API_BASE_URL = process.env.LEGENDS_API_BASE_URL || 'http://localhost:4000/api/v3';
 
 export async function GET(request: NextRequest) {

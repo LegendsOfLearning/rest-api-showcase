@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
 
+export const dynamic = 'force-dynamic';
+
 // Cookie configuration
 const COOKIE_CONFIG = {
   name: 'auth_token',

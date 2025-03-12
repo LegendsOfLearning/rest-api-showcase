@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
 
+export const dynamic = 'force-dynamic';
+
 // Helper function to implement exponential backoff
 async function delay(attempt: number) {
   const baseDelay = API_CONFIG.REQUEST.BASE_DELAY;
