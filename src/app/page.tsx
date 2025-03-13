@@ -10,8 +10,9 @@ export default function Home() {
       </p>
       <ul>
         <li><strong>Standards</strong> - Browse and search educational standards</li>
-        <li><strong>Content</strong> - Explore available learning content and games</li>
+        {/* Temporarily hidden
         <li><strong>Assignments</strong> - Create and manage assignments</li>
+        */}
         <li><strong>Users</strong> - Manage teachers and students</li>
         <li><strong>Search</strong> - Search across all content types</li>
       </ul>

@@ -133,6 +133,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 Standards
               </Link>
+              {/* Temporarily hidden
               <Link
                 href="/content"
                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
@@ -143,6 +144,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 Content Search
               </Link>
+              */}
+              {/* Temporarily hidden
               <Link
                 href="/assignments"
                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
@@ -153,6 +156,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 Assignments
               </Link>
+              */}
               <Link
                 href="/users"
                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
