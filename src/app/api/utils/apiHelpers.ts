@@ -45,17 +45,22 @@ const logger = {
   }
 };
 
-// Validate auth header
-export function validateAuthHeader(request: NextRequest): string | NextResponse {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) {
-    logger.error('Missing authorization header', { url: request.url });
+// Get token from cookie
+export function getTokenFromCookies(request: NextRequest): string | null {
+  return request.cookies.get('auth_token')?.value || null;
+}
+
+// Validate auth from cookie
+export function validateAuth(request: NextRequest): string | NextResponse {
+  const token = getTokenFromCookies(request);
+  if (!token) {
+    logger.error('Missing auth token cookie', { url: request.url });
     return NextResponse.json(
-      { message: 'Authorization token is required' },
+      { message: 'Authentication required' },
       { status: 401 }
     );
   }
-  return authHeader;
+  return `Bearer ${token}`;
 }
 
 // Transform search parameters for content endpoint
@@ -64,7 +69,9 @@ export function transformContentParams(searchParams: URLSearchParams): URLSearch
   const paramsMap: Record<string, string> = {
     query: 'q',
     type: 'game_type',
-    per_page: 'page_size'
+    per_page: 'page_size',
+    standard_set: 'standard_set',
+    school_level: 'school_level'
   };
   
   // Log original parameters
@@ -103,6 +110,40 @@ export function transformContentParams(searchParams: URLSearchParams): URLSearch
   logger.debug('Transformed parameters:', Object.fromEntries(transformedParams));
   
   return transformedParams;
+}
+
+// Add helper function to transform search response
+export function transformSearchResponse(response: any) {
+  if (!response.hits) return response;
+  
+  return {
+    ...response,
+    hits: response.hits.map((hit: any) => {
+      const { data, content_type, ...rest } = hit;
+      const transformedHit = {
+        ...rest,
+        content_type: content_type === 'standard' ? 'standard' : 'content'
+      };
+      
+      if (data?.content_type) {
+        const { grades, standard, learning_objective, subject, ...contentTypeRest } = data.content_type;
+        transformedHit.data = {
+          content_type: {
+            ...contentTypeRest,
+            grade_levels: grades,
+            standard_set: standard,
+            standard: learning_objective,
+            subject: {
+              ...subject,
+              school_level: subject?.grade_level
+            }
+          }
+        };
+      }
+      
+      return transformedHit;
+    })
+  };
 }
 
 // Make API request with error handling

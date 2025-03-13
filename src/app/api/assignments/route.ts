@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
+import { validateAuth } from '../utils/apiHelpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,16 +15,11 @@ async function delay(attempt: number) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Authorization token is required' },
-        { status: 401 }
-      );
+    // Get auth token from cookie
+    const authHeader = validateAuth(request);
+    if (authHeader instanceof NextResponse) {
+      return authHeader;
     }
-
-    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
     
     // Get query parameters
     const { searchParams } = new URL(request.url);
@@ -39,7 +35,7 @@ export async function GET(request: NextRequest) {
           limit,
         },
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         }
       }
@@ -61,20 +57,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Authorization token is required' },
-        { status: 401 }
-      );
+    // Get auth token from cookie
+    const authHeader = validateAuth(request);
+    if (authHeader instanceof NextResponse) {
+      return authHeader;
     }
 
-    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
     const body = await request.json();
 
     // Validate required fields
-    const requiredFields = ['teacher_id', 'standard_id', 'title'];
+    const requiredFields = ['type', 'standard_id', 'application_user_id'];
     const missingFields = requiredFields.filter(field => !body[field]);
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -86,40 +78,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // First, ensure the teacher exists
-    let attempt = 0;
-    while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
-      try {
-        await axios.get(
-          `${API_CONFIG.BASE_URL}/users/${body.teacher_id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        break;
-      } catch (error: any) {
-        if (error.code === 'ECONNRESET' && attempt < API_CONFIG.REQUEST.MAX_RETRIES - 1) {
-          await delay(attempt);
-          attempt++;
-          continue;
-        }
-        throw error;
-      }
-    }
-
     // Create the assignment
-    attempt = 0;
+    let attempt = 0;
     while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
       try {
         const response = await axios.post(
           `${API_CONFIG.BASE_URL}/assignments`,
-          body,
+          {
+            type: body.type,
+            standard_id: body.standard_id,
+            application_user_id: body.application_user_id
+          },
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': authHeader,
               'Content-Type': 'application/json',
             }
           }

@@ -10,7 +10,10 @@ type StandardSet = {
 type Standard = {
   id: number
   standard_code: string
-  learning_objective: string
+  standard: string
+  grade_levels: string[]
+  standard_set: string
+  school_level: string
 }
 
 type User = {
@@ -72,7 +75,7 @@ export default function AssignmentCreator() {
       }
       
       try {
-        const response = await axios.get(`/api/standard_sets/${selectedSetId}/standards`)
+        const response = await axios.get(`/api/standard_sets/standards/${selectedSetId}`)
         if (response.data && response.data.results) {
           setStandards(response.data.results)
         }
@@ -158,13 +161,8 @@ export default function AssignmentCreator() {
         
         for (const studentId of selectedStudentIds) {
           try {
-            const student = students.find(s => s.application_user_id === studentId)
-            if (!student) continue
-
             const joinResponse = await axios.post(`/api/assignments/${assignmentId}/joins`, {
               application_user_id: studentId,
-              student_first_name: student.first_name,
-              student_last_name: student.last_name,
               target: useAwakening ? 'awakening' : 'classic'
             })
             
@@ -272,7 +270,7 @@ export default function AssignmentCreator() {
                     </option>
                     {standards.map((standard) => (
                       <option key={standard.id} value={standard.id}>
-                        {standard.standard_code} - {standard.learning_objective}
+                        {standard.standard_code} - {standard.standard}
                       </option>
                     ))}
                   </select>

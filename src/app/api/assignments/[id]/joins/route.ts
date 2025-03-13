@@ -36,54 +36,8 @@ export async function POST(
       );
     }
     
-    // First ensure the student exists
-    let attempt = 0;
-    while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
-      try {
-        await axios.get(
-          `${API_CONFIG.BASE_URL}/users/${body.application_user_id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        break;
-      } catch (error: any) {
-        // If user doesn't exist, create them
-        if (error.response?.status === 404) {
-          await axios.post(
-            `${API_CONFIG.BASE_URL}/users`,
-            {
-              application_user_id: body.application_user_id,
-              role: 'student',
-              first_name: body.student_first_name || 'Demo',
-              last_name: body.student_last_name || 'Student',
-              email: `${body.application_user_id}@example.com`
-            },
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              }
-            }
-          );
-          break;
-        }
-        
-        // Handle connection reset errors with retry
-        if (error.code === 'ECONNRESET' && attempt < API_CONFIG.REQUEST.MAX_RETRIES - 1) {
-          await delay(attempt);
-          attempt++;
-          continue;
-        }
-        throw error;
-      }
-    }
-
     // Create the join URL
-    attempt = 0;
+    let attempt = 0;
     while (attempt < API_CONFIG.REQUEST.MAX_RETRIES) {
       try {
         const response = await axios.post(

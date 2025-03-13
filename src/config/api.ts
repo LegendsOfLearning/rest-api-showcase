@@ -1,3 +1,16 @@
+/**
+ * ⚠️ DEMO IMPLEMENTATION - NOT FOR PRODUCTION ⚠️
+ * 
+ * This is a simplified demo implementation. In a real production app:
+ * 1. NEVER store OAuth tokens in cookies or expose them to the client
+ * 2. Use server-side session storage (Redis, encrypted DB) for token management
+ * 3. Use session IDs for client identification
+ * 4. Implement proper token refresh and rotation
+ * 
+ * Current implementation uses cookies for demo purposes only.
+ * This is NOT a security best practice and should NOT be used in production.
+ */
+
 export const API_CONFIG = {
   BASE_URL: process.env.LEGENDS_API_BASE_URL || 'http://localhost:4000/api/v3',
   INTERNAL_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',

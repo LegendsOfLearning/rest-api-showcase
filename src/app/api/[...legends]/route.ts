@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAuthHeader, makeApiRequest, transformContentParams } from '../utils/apiHelpers';
+import { validateAuth, makeApiRequest, transformContentParams } from '../utils/apiHelpers';
 import { Method } from 'axios';
 
 // Valid HTTP methods
@@ -14,7 +14,7 @@ async function handleRequest(
 ) {
   try {
     // Validate auth header
-    const authHeader = validateAuthHeader(request);
+    const authHeader = validateAuth(request);
     if (authHeader instanceof NextResponse) {
       return authHeader;
     }

@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
+import { validateAuth } from '../../../utils/apiHelpers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { message: 'Authorization token is required' },
-        { status: 401 }
-      );
+    // Get auth token from cookie
+    const authHeader = validateAuth(request);
+    if (authHeader instanceof NextResponse) {
+      return authHeader;
     }
 
     // Forward the request to the Legends API

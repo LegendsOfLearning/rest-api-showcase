@@ -7,11 +7,14 @@ import SubjectSelector from './SubjectSelector'
 
 type Standard = {
   id: number
-  learning_objective: string
+  standard: string
   image_key: string
   standard_code: string
   ngss_dci_name?: string
   question_count?: number
+  grade_levels: string[]
+  standard_set: string
+  school_level: string
 }
 
 type StandardSet = {
@@ -115,7 +118,7 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
         const response = await axios.get(`/api/standard_sets/${selectedSetId}/standards`, {
           params: { 
             page,
-            page_size: 10
+            per_page: 10
           }
         })
         
@@ -144,7 +147,7 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
   // Handle standard launch
   const handleLaunchStandard = (standard: Standard) => {
     setSelectedStandardId(standard.id.toString())
-    setSelectedStandardName(standard.ngss_dci_name || standard.learning_objective)
+    setSelectedStandardName(standard.ngss_dci_name || standard.standard)
     setIsModalOpen(true)
   }
 
@@ -270,7 +273,7 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
                       {standard.image_key ? (
                         <Image 
                           src={`https://releases-cdn.legendsoflearning.com/legends/image/upload/c_fill,h_260,w_260/learning-objectives/${standard.image_key}`}
-                          alt={standard.learning_objective}
+                          alt={standard.standard}
                           width={260}
                           height={260}
                           className="w-full h-full object-cover"
@@ -293,10 +296,10 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
                         )}
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2 line-clamp-2">
-                        {standard.ngss_dci_name || standard.learning_objective}
+                        {standard.ngss_dci_name || standard.standard}
                       </h3>
                       <p className="text-sm text-slate-600 mb-5 truncate-3-lines">
-                        {standard.learning_objective}
+                        {standard.standard}
                       </p>
                       <button
                         onClick={() => handleLaunchStandard(standard)}
@@ -325,10 +328,10 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
                         )}
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-1.5 truncate">
-                        {standard.ngss_dci_name || standard.learning_objective}
+                        {standard.ngss_dci_name || standard.standard}
                       </h3>
                       <p className="text-sm text-slate-600 mb-3 truncate-2-lines">
-                        {standard.learning_objective}
+                        {standard.standard}
                       </p>
                       <button
                         onClick={() => handleLaunchStandard(standard)}
@@ -476,7 +479,7 @@ export default function StandardsExplorer({ standardSet = 'ngss', subject }: Sta
       {/* Launch Modal */}
       {isModalOpen && selectedStandardId && (
         <LaunchModal 
-          contentId={selectedStandardId} 
+          standardId={selectedStandardId} 
           contentType="standard"
           onClose={handleCloseModal} 
           standardSetId={selectedSetId || ''}

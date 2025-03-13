@@ -14,20 +14,24 @@ type GameResult = {
   estimated_duration: number;
   supports_ipad: boolean;
   supports_tts: boolean;
-  audience: {
-    g1: boolean;
-    g2: boolean;
-    g3: boolean;
-    g4: boolean;
-    g5: boolean;
-    g6: boolean;
-    g7: boolean;
-    g8: boolean;
-    g9: boolean;
-    g10: boolean;
-    g11: boolean;
-    g12: boolean;
-    k: boolean;
+  video_preview_url?: string;
+  version: {
+    id: number;
+    url: string;
+    language_key: string;
+    api_version: string;
+  };
+  grade_levels: string[];
+  stats: {
+    teacher_rating_avg: number;
+    teacher_rating_count: number;
+    student_rating_avg: number;
+    student_rating_count: number;
+    ease_of_play_avg: number;
+    content_integration_avg: number;
+    composite_rating_score: number;
+    composite_rating_avg: number;
+    suggested_use_summary: string;
   };
 };
 

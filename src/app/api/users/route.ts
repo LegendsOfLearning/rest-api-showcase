@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api';
+import { validateAuth } from '../utils/apiHelpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,16 +9,11 @@ const LEGENDS_API_BASE_URL = process.env.LEGENDS_API_BASE_URL || 'http://localho
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Authorization token is required' },
-        { status: 401 }
-      );
+    // Get auth token from cookie
+    const authHeader = validateAuth(request);
+    if (authHeader instanceof NextResponse) {
+      return authHeader;
     }
-
-    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -38,7 +34,7 @@ export async function GET(request: NextRequest) {
       `${API_CONFIG.BASE_URL}/users?${queryParams.toString()}`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         }
       }
@@ -67,16 +63,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: 'Authorization token is required' },
-        { status: 401 }
-      );
+    // Get auth token from cookie
+    const authHeader = validateAuth(request);
+    if (authHeader instanceof NextResponse) {
+      return authHeader;
     }
 
-    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
     const body = await request.json();
     
     // Validate required fields
@@ -93,7 +85,7 @@ export async function POST(request: NextRequest) {
       body,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         }
       }
