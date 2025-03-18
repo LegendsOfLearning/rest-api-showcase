@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --text-primary: #171717;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .text-gray-900 {
+    color: var(--text-primary);
+  }
+  
+  .text-gray-800 {
+    color: var(--text-primary);
+  }
+  
+  .text-gray-700 {
+    color: var(--text-secondary);
+  }
+  
+  .text-gray-600 {
+    color: var(--text-secondary);
+  }
+  
+  .text-gray-500 {
+    color: var(--text-muted);
+  }
+
+  .bg-white {
+    background-color: #1a1a1a;
+  }
+
+  select, input {
+    background-color: #262626;
+    border-color: #404040;
+    color: var(--text-primary);
+  }
+
+  select option {
+    background-color: #262626;
+    color: var(--text-primary);
+  }
+
+  table thead th {
+    color: var(--text-primary);
+  }
+
+  table tbody td {
+    color: var(--text-secondary);
+  }
+
+  .divide-gray-200 > * + * {
+    border-color: #404040;
+  }
+
+  .divide-gray-300 {
+    border-color: #404040;
+  }
+}
