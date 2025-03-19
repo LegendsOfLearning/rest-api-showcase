@@ -7,7 +7,7 @@
  * 
  * Example:
  * Frontend request: /api/users
- * Becomes: https://app.smartlittlecookies.com/api/v3/users
+ * Becomes: https://api.smartlittlecookies.com/api/v3/users
  * 
  * IMPORTANT: 
  * 1. Frontend code should NEVER include /v3 in requests
@@ -16,6 +16,7 @@
  */
 
 export const API_ENDPOINTS = {
+  TOKEN: 'https://api.smartlittlecookies.com/api/v3/oauth2/token',
   // User endpoints
   USERS: '/api/users',
   
@@ -29,8 +30,7 @@ export const API_ENDPOINTS = {
     url: `/api/assignments/${assignmentId}/joins`,
     method: 'POST',
     body: {
-      application_user_id: studentId,
-      target: 'awakening'
+      application_user_id: studentId
     }
   })
 } as const;

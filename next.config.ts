@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    LEGENDS_API_URL: process.env.LEGENDS_API_URL || 'https://api.smartlittlecookies.com/api'
+  }
 };
 
 export default nextConfig;

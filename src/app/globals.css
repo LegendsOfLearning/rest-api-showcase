@@ -4,8 +4,14 @@
   --background: #ffffff;
   --foreground: #171717;
   --text-primary: #171717;
-  --text-secondary: #4b5563;
+  --text-secondary: #374151;
   --text-muted: #6b7280;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f3f4f6;
+  --border-color: #e5e7eb;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --selection-bg: #e5e7eb;
 }
 
 @theme inline {
@@ -17,70 +23,112 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #111827;
+    --foreground: #f9fafb;
     --text-primary: #f3f4f6;
-    --text-secondary: #d1d5db;
+    --text-secondary: #e5e7eb;
     --text-muted: #9ca3af;
+    --surface-primary: #1f2937;
+    --surface-secondary: #374151;
+    --border-color: #374151;
+    --accent-color: #3b82f6;
+    --accent-hover: #60a5fa;
+    --selection-bg: #374151;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Base styles */
+.bg-white {
+  background-color: var(--surface-primary);
+}
+
+.bg-gray-50 {
+  background-color: var(--surface-secondary);
+}
+
+.text-gray-900 {
+  color: var(--text-primary);
+}
+
+.text-gray-800, 
+.text-gray-700 {
+  color: var(--text-secondary);
+}
+
+.text-gray-600, 
+.text-gray-500 {
+  color: var(--text-muted);
+}
+
+/* Selection styles */
+.selected-item {
+  background-color: var(--selection-bg);
+}
+
+/* Form elements */
+select, 
+input[type="text"], 
+input[type="radio"], 
+input[type="checkbox"] {
+  border-color: var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+/* Radio and checkbox specific styles */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent-color);
+}
+
+/* Teacher and student list items */
+.teacher-item,
+.student-item {
+  background-color: var(--surface-primary);
+  border: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--text-primary);
+}
+
+.teacher-item:hover,
+.student-item:hover {
+  background-color: var(--surface-secondary);
+}
+
+.teacher-item.selected,
+.student-item.selected {
+  background-color: var(--selection-bg);
+  border-color: var(--accent-color);
+}
+
+/* Join URLs section */
+.join-url-item {
+  color: var(--text-primary);
+}
+
+/* Button styles */
+.bg-blue-600 {
+  background-color: var(--accent-color);
+}
+
+.hover\:bg-blue-700:hover {
+  background-color: var(--accent-hover);
 }
 
 /* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
-  .text-gray-900 {
-    color: var(--text-primary);
-  }
-  
-  .text-gray-800 {
-    color: var(--text-primary);
-  }
-  
-  .text-gray-700 {
-    color: var(--text-secondary);
-  }
-  
-  .text-gray-600 {
-    color: var(--text-secondary);
-  }
-  
-  .text-gray-500 {
-    color: var(--text-muted);
-  }
-
-  .bg-white {
-    background-color: #1a1a1a;
-  }
-
-  select, input {
-    background-color: #262626;
-    border-color: #404040;
-    color: var(--text-primary);
-  }
-
-  select option {
-    background-color: #262626;
-    color: var(--text-primary);
-  }
-
-  table thead th {
-    color: var(--text-primary);
-  }
-
-  table tbody td {
-    color: var(--text-secondary);
-  }
-
   .divide-gray-200 > * + * {
-    border-color: #404040;
+    border-color: var(--border-color);
   }
-
-  .divide-gray-300 {
-    border-color: #404040;
+  
+  select option {
+    background-color: var(--surface-primary);
+    color: var(--text-primary);
   }
 }

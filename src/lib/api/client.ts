@@ -5,24 +5,19 @@
  * SECURITY NOTICE:
  * This is a SERVER-SIDE ONLY client that handles OAuth2 client credentials flow.
  * - Client secrets are only used server-side
- * - Tokens are managed server-side
+ * - Tokens are managed server-side via auth_token cookie
  * - Frontend MUST use /api/[...legends] proxy which adds auth
  * 
  * Authentication Flow:
  * 1. Frontend makes request to /api/[...legends] proxy
- * 2. Proxy checks for valid token in session cookie
- * 3. If no token or expired, proxy gets new token using this client
- * 4. Proxy adds token and forwards request to Legends API
- * 5. On 401, proxy refreshes token and retries once
+ * 2. Proxy uses auth_token from cookie
+ * 3. If token is invalid/expired, user is redirected to login
  */
 
 import { 
   User, 
   StandardSet, 
-  Standard, 
-  AssignmentCreateRequest,
   AssignmentCreateResponse,
-  AssignmentJoinRequest,
   AssignmentJoinResponse,
   LaunchResponse, 
   PaginatedResponse,
@@ -30,27 +25,8 @@ import {
 } from '@/types/api';
 import { cookies } from 'next/headers';
 
-// From OpenAPI spec
-interface OAuth2TokenRequest {
-  grant_type: 'client_credentials';
-  client_id: string;
-  client_secret: string;
-}
-
-interface OAuth2TokenResponse {
-  access_token: string;
-  token_type: 'bearer';
-  expires_in: number;
-  created_at: string;
-}
-
-const TOKEN_COOKIE = 'legends_token';
-const TOKEN_EXPIRY = 7200; // 2 hours in seconds
-
 class APIClient {
   private baseUrl: string;
-  private apiKey: string;
-  private apiSecret: string;
 
   constructor() {
     // Verify we're server-side
@@ -59,62 +35,21 @@ class APIClient {
     }
 
     this.baseUrl = (process.env.LEGENDS_API_URL || '').replace(/\/$/, '');
-    this.apiKey = process.env.LEGENDS_API_KEY || '';
-    this.apiSecret = process.env.LEGENDS_API_SECRET || '';
 
-    if (!this.baseUrl || !this.apiKey || !this.apiSecret) {
-      throw new Error('Missing required environment variables for Legends API');
+    if (!this.baseUrl) {
+      throw new Error('Missing LEGENDS_API_URL environment variable');
     }
   }
 
   private async getAccessToken(): Promise<string> {
     const cookieStore = await cookies();
-    const storedToken = cookieStore.get(TOKEN_COOKIE);
+    const token = cookieStore.get('auth_token')?.value;
 
-    if (storedToken?.value) {
-      console.log('[Auth] Using token from cookie');
-      return storedToken.value;
+    if (!token) {
+      throw new Error('No auth token found. Please login.');
     }
 
-    const tokenUrl = `${this.baseUrl}/v3/oauth2/token`;
-    console.log('[Auth] Requesting new token');
-
-    const tokenRequest: OAuth2TokenRequest = {
-      grant_type: 'client_credentials',
-      client_id: this.apiKey,
-      client_secret: this.apiSecret,
-    };
-
-    try {
-      const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        },
-        body: new URLSearchParams(tokenRequest as unknown as Record<string, string>),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Auth error: ${response.status} ${response.statusText}`);
-      }
-
-      const data: OAuth2TokenResponse = await response.json();
-      
-      // Store token in cookie
-      const cookieStore = await cookies();
-      cookieStore.set(TOKEN_COOKIE, data.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: TOKEN_EXPIRY
-      });
-
-      return data.access_token;
-    } catch (error) {
-      console.error('[Auth] Token request failed:', error);
-      throw error;
-    }
+    return token;
   }
 
   private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -142,10 +77,7 @@ class APIClient {
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Clear token cookie and retry once
-        const cookieStore = await cookies();
-        cookieStore.delete(TOKEN_COOKIE);
-        return this.fetch<T>(endpoint, options);
+        throw new Error('Session expired. Please login again.');
       }
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }

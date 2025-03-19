@@ -1,5 +1,5 @@
 {
-  description = "One Shot LoL";
+  description = "Legends Launcher";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

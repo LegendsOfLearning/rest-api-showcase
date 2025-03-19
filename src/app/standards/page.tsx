@@ -77,7 +77,11 @@ export default function StandardsPage() {
         if (!data?.entries) {
           throw new Error('Invalid response format');
         }
-        setStandards(data.entries);
+        // Sort standards alphabetically by standard text
+        const sortedStandards = [...data.entries].sort((a, b) => 
+          a.standard.localeCompare(b.standard)
+        );
+        setStandards(sortedStandards);
       } catch (error) {
         console.error('Error fetching standards:', error);
         setError('Failed to load standards');
@@ -170,140 +174,178 @@ export default function StandardsPage() {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Launch Standards</h1>
-      
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      {/* Join URLs Display */}
-      {joinUrls.length > 0 && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-          <h3 className="font-semibold mb-2">Join URLs:</h3>
-          <div className="space-y-2">
-            {joinUrls.map(({ studentId, url }) => {
-              const student = students.find(s => s.application_user_id === studentId);
-              return (
-                <div key={studentId} className="flex items-center justify-between border-b border-green-200 pb-2">
-                  <div className="font-medium">
-                    {student ? `${student.first_name} ${student.last_name}` : studentId}
-                  </div>
-                  <a 
-                    href={url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Join Link
-                  </a>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Teacher Selection */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Select Teacher</h2>
-        <div className="border rounded p-4 space-y-2">
-          {teachers.map(teacher => (
-            <div key={teacher.id} className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id={`teacher-${teacher.application_user_id}`}
-                name="teacher"
-                checked={selectedTeacher?.application_user_id === teacher.application_user_id}
-                onChange={() => setSelectedTeacher(teacher)}
-                className="rounded"
-              />
-              <label htmlFor={`teacher-${teacher.application_user_id}`}>
-                {teacher.first_name} {teacher.last_name}
-                <span className="text-sm text-gray-500 ml-2">
-                  (ID: {teacher.application_user_id})
-                </span>
-              </label>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Launch Standards</h1>
+        
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Students Selection */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Select Students</h2>
-          <div className="border rounded p-4 space-y-2 max-h-96 overflow-y-auto">
-            {students.map(student => (
-              <div key={student.id} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id={student.application_user_id}
-                  checked={selectedStudents.includes(student.application_user_id)}
-                  onChange={() => handleStudentToggle(student.application_user_id)}
-                  className="rounded"
-                />
-                <label htmlFor={student.application_user_id}>{student.first_name} {student.last_name}</label>
-              </div>
-            ))}
           </div>
-        </div>
+        )}
 
-        {/* Standards Selection */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Select Standard</h2>
-          <div className="space-y-4">
-            {/* Standard Sets Dropdown */}
-            <select
-              value={selectedSet || ''}
-              onChange={(e) => handleSetChange(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select a Standard Set</option>
-              {standardSets.map(set => (
-                <option key={set.id} value={set.id}>
-                  {set.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Standards List */}
-            {selectedSet && (
-              <div className="border rounded p-4 max-h-96 overflow-y-auto">
-                {standards.map(standard => (
-                  <div
-                    key={standard.id}
-                    onClick={() => handleStandardSelect(standard)}
-                    className={`p-2 cursor-pointer rounded ${
-                      selectedStandard?.id === standard.id
-                        ? 'bg-blue-100'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {standard.standard}
+        {/* Join URLs Display */}
+        {joinUrls.length > 0 && (
+          <div className="bg-white shadow-sm rounded-lg mb-8 overflow-hidden">
+            <div className="bg-green-50 px-6 py-4 border-b border-green-100">
+              <h3 className="text-lg font-medium text-green-800">Join URLs</h3>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {joinUrls.map(({ studentId, url }) => {
+                const student = students.find(s => s.application_user_id === studentId);
+                return (
+                  <div key={studentId} className="px-6 py-4 flex items-center justify-between">
+                    <div className="font-medium text-gray-900">
+                      {student ? `${student.first_name} ${student.last_name}` : studentId}
+                    </div>
+                    <a 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Join Link
+                      <svg className="ml-2 -mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </a>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-8">
+          {/* Teacher Selection */}
+          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Select Teacher</h2>
+            </div>
+            <div className="px-6 py-4 divide-y divide-gray-200">
+              {teachers.map(teacher => (
+                <div key={teacher.id} className="py-3 first:pt-0 last:pb-0">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      id={`teacher-${teacher.application_user_id}`}
+                      name="teacher"
+                      checked={selectedTeacher?.application_user_id === teacher.application_user_id}
+                      onChange={() => setSelectedTeacher(teacher)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="flex-grow text-gray-900">
+                      {teacher.first_name} {teacher.last_name}
+                      <span className="text-sm text-gray-500 ml-2">
+                        ID: {teacher.application_user_id}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Students Selection */}
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Select Students</h2>
               </div>
-            )}
+              <div className="px-6 py-4">
+                <div className="max-h-96 overflow-y-auto divide-y divide-gray-200">
+                  {students.map(student => (
+                    <div key={student.id} className="py-3 first:pt-0">
+                      <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id={student.application_user_id}
+                          checked={selectedStudents.includes(student.application_user_id)}
+                          onChange={() => handleStudentToggle(student.application_user_id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-gray-900">{student.first_name} {student.last_name}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Standards Selection */}
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Select Standard</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                <select
+                  value={selectedSet || ''}
+                  onChange={(e) => handleSetChange(e.target.value)}
+                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                >
+                  <option value="">Select a Standard Set</option>
+                  {standardSets.map(set => (
+                    <option key={set.id} value={set.id}>
+                      {set.name}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedSet && (
+                  <div className="border border-gray-200 rounded-md max-h-96 overflow-y-auto divide-y divide-gray-200">
+                    {standards.map(standard => (
+                      <div
+                        key={standard.id}
+                        onClick={() => handleStandardSelect(standard)}
+                        className={`p-3 cursor-pointer transition-colors duration-150 ${
+                          selectedStandard?.id === standard.id
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'hover:bg-gray-50 text-gray-900'
+                        }`}
+                      >
+                        {standard.standard}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Launch Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleLaunch}
+              disabled={!selectedStandard || selectedStudents.length === 0 || loading}
+              className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm ${
+                !selectedStandard || selectedStudents.length === 0 || loading
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              }`}
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Launching...
+                </>
+              ) : (
+                'Launch Standard'
+              )}
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Launch Button */}
-      <div className="mt-4">
-        <button
-          onClick={handleLaunch}
-          disabled={!selectedStandard || selectedStudents.length === 0 || loading}
-          className={`px-4 py-2 rounded ${
-            !selectedStandard || selectedStudents.length === 0 || loading
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-          }`}
-        >
-          {loading ? 'Launching...' : 'Launch Standard'}
-        </button>
       </div>
     </div>
   );
