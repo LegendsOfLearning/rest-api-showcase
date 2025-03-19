@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User, StandardSet, Standard } from '@/types/api';
 import { API_ENDPOINTS } from '@/lib/api/endpoints';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function HomePage() {
   const router = useRouter();
@@ -203,12 +204,20 @@ export default function HomePage() {
             <h1 className="text-4xl font-bold">API Showcase</h1>
             <p className="mt-1 text-gray-400">Launch standards to students</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-sm text-gray-300 bg-gray-700/50 rounded hover:bg-gray-700 hover:text-white transition-colors"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/users"
+              className="px-4 py-2 text-sm text-gray-300 bg-gray-700/50 rounded hover:bg-gray-700 hover:text-white transition-colors"
+            >
+              Users
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm text-gray-300 bg-gray-700/50 rounded hover:bg-gray-700 hover:text-white transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {error && (

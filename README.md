@@ -32,10 +32,8 @@ A Next.js application for managing and launching educational standards. This pro
    pnpm install
    ```
 
-3. Create a `.env.local` file with your credentials:
+3. Create a `.env` file with any overrides:
    ```
-   LEGENDS_API_KEY=your_key
-   LEGENDS_API_SECRET=your_secret
    LEGENDS_API_URL=https://api.smartlittlecookies.com/api
    ```
 

@@ -28,7 +28,8 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
     
     // Remove /api prefix and ensure /v3 prefix
     const pathname = request.nextUrl.pathname.replace(/^\/api\//, '');
-    const url = `${process.env.LEGENDS_API_URL}/v3/${pathname}`;
+    const apiPath = `/${API_VERSION}/${pathname}`;
+    const url = `${process.env.LEGENDS_API_URL}${apiPath}`;
     
     console.log('[API] Proxying request:', {
       url,
