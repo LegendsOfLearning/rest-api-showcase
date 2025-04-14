@@ -15,8 +15,13 @@
  * 3. LEGENDS_API_URL includes /api already
  */
 
+// Base URL from environment variable, with fallback
+const API_BASE_URL = process.env.LEGENDS_API_URL || 'https://api.smartlittlecookies.com/api';
+
 export const API_ENDPOINTS = {
-  TOKEN: 'https://api.smartlittlecookies.com/api/v3/oauth2/token',
+  // OAuth token endpoint (special case - includes full URL with /v3)
+  TOKEN: `${API_BASE_URL}/v3/oauth2/token`,
+  
   // User endpoints
   USERS: '/api/users',
   
