@@ -21,9 +21,11 @@ const API_BASE_URL = process.env.LEGENDS_API_URL || 'https://api.smartlittlecook
 export const API_ENDPOINTS = {
   // OAuth token endpoint (special case - includes full URL with /v3)
   TOKEN: `${API_BASE_URL}/v3/oauth2/token`,
+  TOKEN_REVOKE: `${API_BASE_URL}/v3/oauth2/revoke`,
   
   // User endpoints
   USERS: '/api/users',
+  USER: (id: number | string) => `/api/users/${id}`,
   
   // Standards endpoints
   STANDARD_SETS: '/api/standard_sets',
@@ -31,13 +33,30 @@ export const API_ENDPOINTS = {
   
   // Assignment endpoints
   ASSIGNMENTS: '/api/assignments',
-  ASSIGNMENT_JOIN: (assignmentId: number, studentId: string) => ({
+  ASSIGNMENT: (id: number | string) => `/api/assignments/${id}`,
+  ASSIGNMENT_JOIN: (assignmentId: number, studentId: string, target: 'awakening' | 'web' = 'awakening') => ({
     url: `/api/assignments/${assignmentId}/joins`,
     method: 'POST',
     body: {
-      application_user_id: studentId
+      application_user_id: studentId,
+      target
     }
-  })
+  }),
+
+  // Searches
+  SEARCHES: '/api/searches',
+
+  // Content
+  CONTENT: '/api/content',
+  CONTENT_DETAIL: (id: number | string) => `/api/content/${id}`,
+  CONTENT_REVIEWS: (id: number | string) => `/api/content/${id}/reviews`,
+
+  // Aggregates
+  STUDENT: (applicationUserId: string) => `/api/students/${applicationUserId}`,
+  STANDARD_AGG: (id: number | string) => `/api/standards/${id}`,
+
+  // Docs (proxied via API route)
+  DOCS_SWAGGER_UI: '/api/docs/swagger-ui'
 } as const;
 
 // Example usage:

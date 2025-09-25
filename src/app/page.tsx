@@ -35,7 +35,7 @@ export default function HomePage() {
         const teachers = data.filter((user: User) => user.role === 'teacher');
         
         if (teachers.length === 0) {
-          throw new Error('No teachers found');
+          setError('No teachers found. Go to Users and create a teacher to continue.');
         }
         
         setStudents(students);
@@ -48,16 +48,35 @@ export default function HomePage() {
     fetchUsers();
   }, []);
 
-  // Fetch standard sets on mount
+  // Fetch all standard sets on mount (paginate until all collected)
   useEffect(() => {
     async function fetchStandardSets() {
       try {
-        const response = await fetch(API_ENDPOINTS.STANDARD_SETS);
-        const data = await response.json();
-        if (!data?.results) {
-          throw new Error('Invalid response format');
+        let page = 1;
+        const pageSize = 100;
+        let all: StandardSet[] = [];
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const response = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
+          const data = await response.json();
+          const results: StandardSet[] = Array.isArray(data?.results) ? data.results : [];
+          all = all.concat(results);
+
+          const total: number | undefined = typeof data?.total_count === 'number' ? data.total_count : undefined;
+          const perPage: number = typeof data?.per_page === 'number' ? data.per_page : pageSize;
+
+          const reachedTotal = typeof total === 'number' ? all.length >= total : false;
+          const isLastBySize = results.length < perPage;
+
+          if (reachedTotal || isLastBySize) {
+            break;
+          }
+
+          page += 1;
         }
-        setStandardSets(data.results);
+
+        setStandardSets(all);
       } catch (error) {
         console.error('Error fetching standard sets:', error);
         setError('Failed to load standard sets');
@@ -179,22 +198,7 @@ export default function HomePage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
-
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      setError('Failed to logout');
-    }
-  };
+  // Logout is provided in global navigation
 
   return (
     <div className="min-h-screen bg-gray-800 text-white">
@@ -211,12 +215,7 @@ export default function HomePage() {
             >
               Users
             </Link>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm text-gray-300 bg-gray-700/50 rounded hover:bg-gray-700 hover:text-white transition-colors"
-            >
-              Logout
-            </button>
+            {/* Logout now in global nav */}
           </div>
         </div>
 
