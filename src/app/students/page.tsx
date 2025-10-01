@@ -8,7 +8,7 @@ export default function StudentsPage() {
   const [view, setView] = useState<'assignment' | 'standard'>('assignment')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<unknown>(null)
 
   const fetchData = async () => {
     setLoading(true)
@@ -41,7 +41,7 @@ export default function StudentsPage() {
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">View</label>
-              <select value={view} onChange={e => setView(e.target.value as any)} className="w-full px-3 py-2 border rounded">
+              <select value={view} onChange={e => setView(e.target.value as 'assignment' | 'standard')} className="w-full px-3 py-2 border rounded">
                 <option value="assignment">by assignment</option>
                 <option value="standard">by standard</option>
               </select>
@@ -53,12 +53,12 @@ export default function StudentsPage() {
           {error && <div className="text-sm text-red-600">{error}</div>}
         </div>
 
-        {result && (
+        {result != null ? (
           <div className="bg-white border rounded p-4">
             <h3 className="font-semibold mb-2">Response</h3>
             <pre className="text-xs overflow-auto bg-gray-50 p-3 rounded">{JSON.stringify(result, null, 2)}</pre>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

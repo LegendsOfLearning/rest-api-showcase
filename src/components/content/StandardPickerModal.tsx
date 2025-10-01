@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { API_ENDPOINTS } from '@/lib/api/endpoints'
 import type { StandardsResponse, StandardSet, Standard } from '@/types/api'
 
 type Props = {
   open: boolean
   onClose: () => void
-  onSelect: (standard: { id: number; label: string }) => void
+  onSelect: (standard: { id: number; label: string; code?: string; image_url?: string }) => void
+  /** When provided, the modal locks to this standard set and hides the set selector */
+  forceSetId?: string
 }
 
-export default function StandardPickerModal({ open, onClose, onSelect }: Props) {
+export default function StandardPickerModal({ open, onClose, onSelect, forceSetId }: Props) {
   const [sets, setSets] = useState<StandardSet[]>([])
   const [selectedSetId, setSelectedSetId] = useState<string>('')
   const [standards, setStandards] = useState<Standard[]>([])
@@ -32,14 +34,19 @@ export default function StandardPickerModal({ open, onClose, onSelect }: Props) 
     return () => { cancelled = true }
   }, [open])
 
+  // When forceSetId is provided, sync it to local state
   useEffect(() => {
-    if (!open || !selectedSetId) return
+    if (open && forceSetId) setSelectedSetId(forceSetId)
+  }, [open, forceSetId])
+
+  useEffect(() => {
+    if (!open || !(selectedSetId || forceSetId)) return
     let cancelled = false
     async function run() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch(API_ENDPOINTS.STANDARDS(selectedSetId))
+        const res = await fetch(API_ENDPOINTS.STANDARDS(selectedSetId || forceSetId!))
         if (!res.ok) throw new Error('Failed to load standards')
         const data: StandardsResponse = await res.json()
         if (!cancelled) setStandards(data.entries)
@@ -51,7 +58,7 @@ export default function StandardPickerModal({ open, onClose, onSelect }: Props) 
     }
     run()
     return () => { cancelled = true }
-  }, [open, selectedSetId])
+  }, [open, selectedSetId, forceSetId])
 
   if (!open) return null
 
@@ -66,12 +73,16 @@ export default function StandardPickerModal({ open, onClose, onSelect }: Props) 
           </div>
 
           <div className="p-4 space-y-3">
-            <select value={selectedSetId} onChange={e => setSelectedSetId(e.target.value)} className="w-full px-3 py-2 border rounded">
-              <option value="">Select a Standard Set…</option>
-              {sets.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            {!forceSetId ? (
+              <select value={selectedSetId} onChange={e => setSelectedSetId(e.target.value)} className="w-full px-3 py-2 border rounded">
+                <option value="">Select a Standard Set…</option>
+                {sets.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-xs text-slate-600 dark:text-slate-400">Standard Set locked: <span className="font-medium">{forceSetId}</span></div>
+            )}
 
             <div className="min-h-60 border rounded overflow-hidden">
               {loading ? (
@@ -83,9 +94,9 @@ export default function StandardPickerModal({ open, onClose, onSelect }: Props) 
                   {standards.map(std => (
                     <button
                       key={std.id}
-                      onClick={() => onSelect({ id: std.id, label: std.standard })}
+                      onClick={() => onSelect({ id: std.id, label: std.standard, code: (std as { standard_code?: string }).standard_code, image_url: (std as { image_url?: string }).image_url })}
                       className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                    >{std.standard}</button>
+                    >{(std as { standard_code?: string }).standard_code ? `${(std as { standard_code?: string }).standard_code} • ${std.standard}` : std.standard}</button>
                   ))}
                 </div>
               )}

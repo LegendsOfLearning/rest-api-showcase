@@ -50,7 +50,6 @@ export default function ContentPage() {
                 <option value="question">Question</option>
                 <option value="simulation">Simulation</option>
                 <option value="video">Video</option>
-                <option value="hands_on">Hands On</option>
               </select>
             </div>
             <div>

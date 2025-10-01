@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { API_ENDPOINTS } from '@/lib/api/endpoints';
-import type { ContentListEntry, ContentListResponse, GlobalSearchParams, GlobalSearchResponse, SearchResult, StandardSet } from '@/types/api';
+import type { ContentListEntry, ContentListResponse, GlobalSearchParams, GlobalSearchResponse, SearchResult } from '@/types/api';
 
 export type PickedContent = {
   id: number;
@@ -11,6 +11,7 @@ export type PickedContent = {
   thumbnail_url: string;
   game_type?: string;
   content_type?: string;
+  is_question_game?: boolean;
 };
 
 type ContentPickerModalProps = {
@@ -34,7 +35,7 @@ export function ContentPickerModal({ open, onClose, onSelect, initialQuery }: Co
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseData, setBrowseData] = useState<ContentListResponse | null>(null);
   const [browsePage, setBrowsePage] = useState(1);
-  const [standardSets, setStandardSets] = useState<StandardSet[]>([]);
+  // Previously fetched standard sets for potential filters; removed as currently unused.
 
   // Close on Escape
   useEffect(() => {
@@ -46,35 +47,7 @@ export function ContentPickerModal({ open, onClose, onSelect, initialQuery }: Co
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // Fetch standard sets once for potential future filter extensions
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchSets() {
-      try {
-        let page = 1;
-        const pageSize = 100;
-        let all: StandardSet[] = [];
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          const res = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
-          const data = await res.json();
-          const results: StandardSet[] = Array.isArray(data?.results) ? data.results : [];
-          all = all.concat(results);
-          const total: number | undefined = typeof data?.total_count === 'number' ? data.total_count : undefined;
-          const perPage: number = typeof data?.per_page === 'number' ? data.per_page : pageSize;
-          const reachedTotal = typeof total === 'number' ? all.length >= total : false;
-          const isLastBySize = results.length < perPage;
-          if (reachedTotal || isLastBySize) break;
-          page += 1;
-        }
-        if (!cancelled) setStandardSets(all);
-      } catch {
-        // ignore
-      }
-    }
-    fetchSets();
-    return () => { cancelled = true; };
-  }, []);
+  // Previously fetched standard sets for potential filters; removed as currently unused.
 
   // Debounced search
   useEffect(() => {
@@ -97,13 +70,15 @@ export function ContentPickerModal({ open, onClose, onSelect, initialQuery }: Co
           signal: controller.signal,
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error?.message || `Search failed (${res.status})`);
+          const body: unknown = await res.json().catch(() => ({}));
+          const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
+          const message = isRecord(body) && isRecord(body.error) && typeof body.error.message === 'string' ? body.error.message : undefined
+          throw new Error(message || `Search failed (${res.status})`);
         }
-        const data: GlobalSearchResponse = await res.json();
+          const data: GlobalSearchResponse = await res.json();
         setSearchResults(data);
       } catch (e) {
-        if ((e as any)?.name === 'AbortError') return;
+        if (e && typeof e === 'object' && 'name' in e && (e as { name?: string }).name === 'AbortError') return;
         setSearchError(e instanceof Error ? e.message : 'Search failed');
       } finally {
         setSearchLoading(false);
@@ -146,7 +121,7 @@ export function ContentPickerModal({ open, onClose, onSelect, initialQuery }: Co
         if (hit.content_type === 'standard') {
           return null as unknown as PickedContent;
         }
-        const c = (hit as any).content;
+        const c = (hit as { content_type: 'content'; content: { id: number; name: string; description?: string; thumbnail_url: string; game_type?: string; content_type?: string } }).content;
         return {
           id: c.id,
           name: c.name,
@@ -202,10 +177,10 @@ export function ContentPickerModal({ open, onClose, onSelect, initialQuery }: Co
                 />
                 <div className="md:col-span-2">
                   <div className="grid grid-cols-4 gap-1">
-                    {['all','game','video'].map(t => (
+                    {(['all','game','video'] as const).map(t => (
                       <button
                         key={t}
-                        onClick={() => setSearchType(t as any)}
+                        onClick={() => setSearchType(t)}
                         className={`px-2 py-1 text-xs rounded border ${searchType===t ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white border-gray-300 text-gray-700'}`}
                       >{t.replace('_', ' ')}</button>
                     ))}

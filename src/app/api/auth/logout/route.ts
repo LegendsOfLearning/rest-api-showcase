@@ -18,7 +18,7 @@ export async function POST() {
         // RFC 7009 token revocation - token is sufficient for confidential clients on our server
         body: new URLSearchParams({ token }).toString(),
       });
-    } catch (_err) {
+    } catch {
       // swallow – logout continues
     }
   }

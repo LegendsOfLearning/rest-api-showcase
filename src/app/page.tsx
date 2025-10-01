@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { User, StandardSet, Standard } from '@/types/api';
 import { API_ENDPOINTS } from '@/lib/api/endpoints';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const router = useRouter();
+  // router reserved for future navigation (e.g., to detail pages)
+  // Keeping it defined triggers lint; remove until used
+  // const router = useRouter();
   const [students, setStudents] = useState<User[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
@@ -56,7 +58,7 @@ export default function HomePage() {
         const pageSize = 100;
         let all: StandardSet[] = [];
 
-        // eslint-disable-next-line no-constant-condition
+        
         while (true) {
           const response = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
           const data = await response.json();

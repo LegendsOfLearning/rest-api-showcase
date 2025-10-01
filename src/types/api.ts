@@ -106,9 +106,8 @@ export interface GlobalSearchResponse {
 }
 
 export interface AssignmentCreateRequest {
-  type: 'standard';
-  standard_id: number;
   application_user_id: string;
+  activities: { content_id?: number; standard_id?: number }[];
 }
 
 export interface AssignmentCreateResponse {
@@ -243,7 +242,8 @@ export interface ContentReviewsResponse {
 // Assignment detail
 export interface AssignmentActivitySummary {
   id: number;
-  type: 'mini_game' | 'video' | 'awakening_activity' | string;
+  type: 'content';
+  content_type?: 'game' | 'video' | null;
   standard_id?: number | null;
   content_id?: number | null;
 }

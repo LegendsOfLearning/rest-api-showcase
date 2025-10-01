@@ -15,69 +15,63 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [standardSets, setStandardSets] = useState<StandardSet[]>([]);
 
-  const runSearch = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(API_ENDPOINTS.SEARCHES, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error?.message || 'Search failed');
-      }
-      const data: GlobalSearchResponse = await res.json();
-      setResults(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    runSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(API_ENDPOINTS.SEARCHES, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        });
+        if (!res.ok) {
+          const body: unknown = await res.json().catch(() => ({}));
+          const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+          const message = isRecord(body) && isRecord(body.error) && typeof body.error.message === 'string' ? body.error.message : undefined;
+          throw new Error(message || 'Search failed');
+        }
+        const data: GlobalSearchResponse = await res.json();
+        if (!cancelled) setResults(data);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Search failed');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  // intentionally run only once on mount for initial search
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    async function fetchStandardSets() {
+    let cancelled = false;
+    (async () => {
       try {
         let page = 1;
         const pageSize = 100;
-        let all: StandardSet[] = [];
-
-        // Fetch all pages until we've collected all results
-        // Fallback behavior: stop when a page returns fewer than pageSize
-        // or when we reach total_count if provided by the API
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        const all: StandardSet[] = [];
+        for (let i = 0; i < 1000; i += 1) { // safety guard
           const res = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
-          const data = await res.json();
-          const results: StandardSet[] = Array.isArray(data?.results) ? data.results : [];
-          all = all.concat(results);
-
-          const total: number | undefined = typeof data?.total_count === 'number' ? data.total_count : undefined;
-          const perPage: number = typeof data?.per_page === 'number' ? data.per_page : pageSize;
-
+          const data: unknown = await res.json();
+          type SetsPage = { results?: StandardSet[]; total_count?: number; per_page?: number };
+          const d = (data || {}) as SetsPage;
+          const results: StandardSet[] = Array.isArray(d.results) ? d.results : [];
+          all.push(...results);
+          const total: number | undefined = typeof d.total_count === 'number' ? d.total_count : undefined;
+          const perPage: number = typeof d.per_page === 'number' ? d.per_page : pageSize;
           const reachedTotal = typeof total === 'number' ? all.length >= total : false;
           const isLastBySize = results.length < perPage;
-
-          if (reachedTotal || isLastBySize) {
-            break;
-          }
-
+          if (reachedTotal || isLastBySize) break;
           page += 1;
         }
-
-        setStandardSets(all);
+        if (!cancelled) setStandardSets(all);
       } catch {
-        // Silently ignore; dropdown will just have the default option
+        // ignore
       }
-    }
-    fetchStandardSets();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const toggleArrayParam = <T extends string>(key: keyof GlobalSearchParams, value: T) => {
@@ -103,7 +97,6 @@ export default function SearchPage() {
               <select value={params.content_type || 'game'} onChange={e => setParams(p => ({ ...p, content_type: e.target.value as SearchContentType }))} className="w-full px-3 py-2 border rounded">
                 <option value="game">Game</option>
                 <option value="video">Video</option>
-                <option value="hands_on">Hands On</option>
                 <option value="standard">Standard</option>
               </select>
             </div>
@@ -157,7 +150,32 @@ export default function SearchPage() {
           </div>
 
           <div className="mt-4 flex items-center gap-3">
-            <button onClick={runSearch} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300">{loading ? 'Searching...' : 'Search'}</button>
+            <button onClick={() => {
+              // manual search trigger
+              (async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                  const res = await fetch(API_ENDPOINTS.SEARCHES, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params),
+                  });
+                  if (!res.ok) {
+                    const body: unknown = await res.json().catch(() => ({}));
+                    const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+                    const message = isRecord(body) && isRecord(body.error) && typeof body.error.message === 'string' ? body.error.message : undefined;
+                    throw new Error(message || 'Search failed');
+                  }
+                  const data: GlobalSearchResponse = await res.json();
+                  setResults(data);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : 'Search failed');
+                } finally {
+                  setLoading(false);
+                }
+              })();
+            }} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300">{loading ? 'Searching...' : 'Search'}</button>
             {error && <span className="text-sm text-red-600">{error}</span>}
           </div>
         </div>
@@ -171,20 +189,20 @@ export default function SearchPage() {
                   <div key={`${hit.content_type}-${hit.id}`} className="p-4">
                     {hit.content_type === 'standard' ? (
                       <div className="flex items-start gap-4">
-                        <img src={(hit as any).standard.image} alt="" className="w-16 h-16 object-cover rounded" />
+                        <img src={(hit as { content_type: 'standard'; standard: { image: string } }).standard.image} alt="" className="w-16 h-16 object-cover rounded" />
                         <div>
-                          <div className="font-medium">{(hit as any).standard.name}</div>
-                          <div className="text-sm text-gray-600">{(hit as any).standard.description}</div>
-                          <div className="text-xs text-gray-500">Set: {(hit as any).standard.standard_set}</div>
+                          <div className="font-medium">{(hit as { content_type: 'standard'; standard: { name: string } }).standard.name}</div>
+                          <div className="text-sm text-gray-600">{(hit as { content_type: 'standard'; standard: { description: string } }).standard.description}</div>
+                          <div className="text-xs text-gray-500">Set: {(hit as { content_type: 'standard'; standard: { standard_set: string } }).standard.standard_set}</div>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-start gap-4">
-                        <img src={(hit as any).content.thumbnail_url} alt="" className="w-16 h-16 object-cover rounded" />
+                        <img src={(hit as { content_type: 'content'; content: { thumbnail_url: string } }).content.thumbnail_url} alt="" className="w-16 h-16 object-cover rounded" />
                         <div>
-                          <div className="font-medium">{(hit as any).content.name}</div>
-                          <div className="text-sm text-gray-600">{(hit as any).content.description}</div>
-                          <div className="text-xs text-gray-500">Type: {(hit as any).content.content_type} | Game: {(hit as any).content.game_type}</div>
+                          <div className="font-medium">{(hit as { content_type: 'content'; content: { name: string } }).content.name}</div>
+                          <div className="text-sm text-gray-600">{(hit as { content_type: 'content'; content: { description: string } }).content.description}</div>
+                          <div className="text-xs text-gray-500">Type: {(hit as { content_type: 'content'; content: { content_type: string; game_type: string } }).content.content_type} | Game: {(hit as { content_type: 'content'; content: { content_type: string; game_type: string } }).content.game_type}</div>
                         </div>
                       </div>
                     )}

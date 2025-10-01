@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from '@/lib/api/endpoints';
 
 export default function DocsPage() {
   const [src, setSrc] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     // Use proxied swagger-ui to include token via cookie

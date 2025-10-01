@@ -19,7 +19,6 @@ export default function LogoutButton() {
       router.push('/login');
     } catch (err) {
       setError('Failed to logout');
-      // eslint-disable-next-line no-console
       console.error('Logout error:', err);
     } finally {
       setLoading(false);
