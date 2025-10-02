@@ -270,3 +270,20 @@ export interface AssignmentDetailResponse {
   by_standard?: unknown;
   by_standard_by_student?: unknown;
 }
+
+export interface AssignmentListEntry {
+  id: number;
+  name?: string | null;
+  status?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  activities?: { id: number; type: string; standard_id?: number | null; content_id?: number | null }[];
+}
+
+export interface AssignmentListResponse {
+  entries: AssignmentListEntry[];
+  page_number: number;
+  page_size: number;
+  total_pages: number;
+  total_entries: number;
+}

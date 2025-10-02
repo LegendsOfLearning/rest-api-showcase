@@ -22,6 +22,15 @@ type ActivityUiState = {
   error?: string | null;
 };
 
+type AssignmentListEntry = {
+  id: number;
+  name?: string | null;
+  status?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  activities?: { id: number; type: string; standard_id?: number | null; content_id?: number | null }[];
+};
+
 export default function AssignmentsBuilderPage() {
   const [applicationUserId, setApplicationUserId] = useState('');
   const [name, setName] = useState('');
@@ -50,6 +59,8 @@ export default function AssignmentsBuilderPage() {
   const [pickerOpenForIndex, setPickerOpenForIndex] = useState<number | null>(null);
   const [stdPickerOpenForIndex, setStdPickerOpenForIndex] = useState<number | null>(null);
   const [activityUi, setActivityUi] = useState<Record<number, ActivityUiState>>({});
+  const [assignmentsPage, setAssignmentsPage] = useState<{ entries: AssignmentListEntry[]; page_number: number; page_size: number; total_pages: number; total_entries: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<'builder' | 'viewer'>('builder');
 
   const addActivity = () => setActivities(prev => [...prev, {}]);
   const updateActivity = (idx: number, patch: Partial<ActivityRow>) => setActivities(prev => prev.map((a, i) => i === idx ? { ...a, ...patch } : a));
@@ -270,11 +281,74 @@ export default function AssignmentsBuilderPage() {
     }
   };
 
+  // Fetch assignments list in viewer tab
+  useEffect(() => {
+    if (activeTab !== 'viewer') return;
+    const controller = new AbortController();
+    const url = applicationUserId ? `${API_ENDPOINTS.ASSIGNMENTS}?include=activities&application_user_id=${encodeURIComponent(applicationUserId)}` : `${API_ENDPOINTS.ASSIGNMENTS}?include=activities`;
+    fetch(url, { signal: controller.signal })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to load assignments');
+        const data = await res.json();
+        setAssignmentsPage(data as typeof assignmentsPage);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [activeTab, applicationUserId]);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="w-full max-w-none p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Assignments Builder</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Assignments</h1>
+          <div className="inline-flex items-center gap-2 border rounded-md p-1 bg-white dark:bg-slate-900">
+            <button onClick={() => setActiveTab('builder')} className={`px-3 py-1.5 text-sm rounded ${activeTab==='builder'?'bg-blue-600 text-white':'text-slate-700 dark:text-slate-300'}`}>Builder</button>
+            <button onClick={() => setActiveTab('viewer')} className={`px-3 py-1.5 text-sm rounded ${activeTab==='viewer'?'bg-blue-600 text-white':'text-slate-700 dark:text-slate-300'}`}>Viewer</button>
+          </div>
+        </div>
 
+        {activeTab === 'viewer' ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-4 space-y-4">
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Filter by teacher application_user_id (optional)</label>
+                <input value={applicationUserId} onChange={e => setApplicationUserId(e.target.value)} className="w-full px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500" placeholder="teacher-123" />
+              </div>
+              <button onClick={() => setActiveTab('viewer')} className="px-3.5 py-2 border rounded-md">Refresh</button>
+            </div>
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500">
+                    <th className="py-2 pr-4">ID</th>
+                    <th className="py-2 pr-4">Name</th>
+                    <th className="py-2 pr-4">Status</th>
+                    <th className="py-2 pr-4">Dates</th>
+                    <th className="py-2 pr-4">Activities</th>
+                    <th className="py-2 pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignmentsPage?.entries?.map(a => (
+                    <tr key={a.id} className="border-t border-slate-200 dark:border-slate-800">
+                      <td className="py-2 pr-4 font-mono">{a.id}</td>
+                      <td className="py-2 pr-4">{a.name || ''}</td>
+                      <td className="py-2 pr-4">{a.status || ''}</td>
+                      <td className="py-2 pr-4">{a.start_date || ''}{a.end_date ? ` → ${a.end_date}` : ''}</td>
+                      <td className="py-2 pr-4">{a.activities?.map(x => x.type).join(', ')}</td>
+                      <td className="py-2 pr-4">
+                        <button onClick={async () => { const res = await fetch(API_ENDPOINTS.ASSIGNMENT(a.id)); if (res.ok) setAssignment(await res.json()); setDetailView('default'); setActiveTab('builder'); }} className="px-2 py-1 text-xs border rounded-md">Open</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!assignmentsPage?.entries?.length && (
+                    <tr><td className="py-6 text-slate-500" colSpan={6}>No assignments yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
           {/* Left pane: Builder */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-4 space-y-4">
@@ -460,6 +534,7 @@ export default function AssignmentsBuilderPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Assignment details stays below */}
         {assignment && (
