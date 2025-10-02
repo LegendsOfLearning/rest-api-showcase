@@ -60,7 +60,7 @@ export default function HomePage() {
 
         
         while (true) {
-          const response = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
+          const response = await fetch(API_ENDPOINTS.STANDARD_SETS({ page, pageSize }));
           const data = await response.json();
           const results: StandardSet[] = Array.isArray(data?.results) ? data.results : [];
           all = all.concat(results);

@@ -29,7 +29,16 @@ export const API_ENDPOINTS = {
   USER: (id: number | string) => `/api/users/${id}`,
   
   // Standards endpoints
-  STANDARD_SETS: '/api/standard_sets',
+  STANDARD_SETS: (params?: { page?: number | string; pageSize?: number | string; perPage?: number | string; subjectArea?: string }) => {
+    if (!params) return '/api/standard_sets';
+    const search = new URLSearchParams();
+    if (params.page != null) search.set('page', String(params.page));
+    const pageSize = params.pageSize ?? params.perPage;
+    if (pageSize != null) search.set('page_size', String(pageSize));
+    if (params.subjectArea) search.set('subject_area', params.subjectArea);
+    const query = search.toString();
+    return query ? `/api/standard_sets?${query}` : '/api/standard_sets';
+  },
   STANDARDS: (setId: string) => `/api/standard_sets/${setId}/standards`,
   
   // Assignment endpoints

@@ -50,10 +50,10 @@ export default function SearchPage() {
     (async () => {
       try {
         let page = 1;
-        const pageSize = 100;
+        const pageSize = 500;
         const all: StandardSet[] = [];
         for (let i = 0; i < 1000; i += 1) { // safety guard
-          const res = await fetch(`${API_ENDPOINTS.STANDARD_SETS}?page=${page}&page_size=${pageSize}`);
+          const res = await fetch(API_ENDPOINTS.STANDARD_SETS({ page, pageSize }));
           const data: unknown = await res.json();
           type SetsPage = { results?: StandardSet[]; total_count?: number; per_page?: number };
           const d = (data || {}) as SetsPage;

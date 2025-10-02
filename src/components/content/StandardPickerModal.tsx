@@ -22,7 +22,7 @@ export default function StandardPickerModal({ open, onClose, onSelect, forceSetI
     let cancelled = false
     async function run() {
       try {
-        const res = await fetch(API_ENDPOINTS.STANDARD_SETS)
+        const res = await fetch(API_ENDPOINTS.STANDARD_SETS({ pageSize: 500 }))
         const data = await res.json()
         const results = (data?.results || []) as StandardSet[]
         if (!cancelled) setSets(results)
