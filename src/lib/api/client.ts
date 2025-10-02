@@ -119,15 +119,12 @@ class APIClient {
   async createAssignment(standardId: number | string, applicationUserId: string): Promise<AssignmentCreateResponse> {
     console.log('Creating assignment with:', { standardId, applicationUserId });
     const numericStandardId = typeof standardId === 'string' ? parseInt(standardId, 10) : standardId;
-    
     if (isNaN(numericStandardId)) {
       throw new Error(`Invalid standard_id: ${standardId}`);
     }
-    
     const payload = {
-      type: 'standard',
-      standard_id: numericStandardId,
-      application_user_id: applicationUserId
+      application_user_id: applicationUserId,
+      activities: [ { standard_id: numericStandardId } ]
     };
     console.log('Assignment payload:', payload);
     return this.fetch<AssignmentCreateResponse>('/assignments', {
@@ -143,7 +140,7 @@ class APIClient {
       target: 'awakening'
     };
     console.log('Join link payload:', payload);
-    return this.fetch<AssignmentJoinResponse>(`/assignments/${assignmentId}/join`, {
+    return this.fetch<AssignmentJoinResponse>(`/assignments/${assignmentId}/joins`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

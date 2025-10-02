@@ -69,25 +69,6 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-
-    try {
-      const response = await fetch(`${API_ENDPOINTS.USERS}/${userId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete user');
-      }
-
-      fetchUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      setError('Failed to delete user');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -219,12 +200,7 @@ export default function UsersPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      Delete
-                    </button>
+                    <Link href={`/users/${user.id}`} className="text-blue-400 hover:text-blue-300">View</Link>
                   </div>
                 </div>
               ))}
