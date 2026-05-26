@@ -1,0 +1,560 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--text-muted);
+  --color-surface: var(--surface-primary);
+  --color-surface-100: var(--surface-100);
+  --color-surface-200: var(--surface-200);
+  --color-border: var(--border-color);
+  --color-accent: var(--accent-color);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--text-on-accent);
+  --color-accent-foreground: var(--text-on-accent);
+  --color-error: var(--error-text);
+  --color-success: var(--success-text);
+  --color-warning: var(--warning-text);
+  --color-info: var(--info-text);
+}
+
+:root {
+  --background: #f4f6fb;
+  --foreground: #111827;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4b5563;
+  --text-on-accent: #ffffff;
+  --surface-primary: #ffffff;
+  --surface-100: #f8fafc;
+  --surface-200: #eef2ff;
+  --border-color: rgba(15, 23, 42, 0.12);
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-soft-strong: rgba(37, 99, 235, 0.14);
+  --accent-border: rgba(37, 99, 235, 0.24);
+  --selection-bg: rgba(37, 99, 235, 0.08);
+  --shadow-soft: 0 25px 50px -12px rgba(59, 130, 246, 0.25);
+  --error-color: #dc2626;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+  --success-color: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+  --warning-color: #d97706;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --info-color: #2563eb;
+  --info-bg: #eff6ff;
+  --info-text: #1e40af;
+}
+
+[data-theme="dark"] {
+  --background: #050915;
+  --foreground: #f9fafb;
+  --text-primary: #f3f4f6;
+  --text-secondary: #e5e7eb;
+  --text-muted: #94a3b8;
+  --text-on-accent: #06111f;
+  --surface-primary: #0f172a;
+  --surface-100: rgba(255, 255, 255, 0.04);
+  --surface-200: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(148, 163, 184, 0.24);
+  --accent-color: #60a5fa;
+  --accent-hover: #93c5fd;
+  --accent-soft: rgba(96, 165, 250, 0.12);
+  --accent-soft-strong: rgba(96, 165, 250, 0.18);
+  --accent-border: rgba(96, 165, 250, 0.32);
+  --selection-bg: rgba(148, 163, 184, 0.2);
+  --shadow-soft: 0 15px 40px rgba(15, 23, 42, 0.6);
+  --error-color: #ef4444;
+  --error-bg: rgba(220, 38, 38, 0.1);
+  --error-text: #fca5a5;
+  --success-color: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-text: #86efac;
+  --warning-color: #f59e0b;
+  --warning-bg: rgba(217, 119, 6, 0.1);
+  --warning-text: #fcd34d;
+  --info-color: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.1);
+  --info-text: #93c5fd;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.bg-app {
+  background: radial-gradient(circle at top, rgba(79, 70, 229, 0.08), transparent 45%), var(--background);
+}
+
+.bg-surface {
+  background-color: var(--surface-primary);
+}
+
+.bg-surface-100 {
+  background-color: var(--surface-100);
+}
+
+.bg-surface-200 {
+  background-color: var(--surface-200);
+}
+
+.text-foreground {
+  color: var(--foreground);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Custom accent utilities - using explicit names to avoid Tailwind v4 auto-generation conflicts */
+.text-accent-color {
+  color: var(--accent-color);
+}
+
+.bg-accent-color {
+  background-color: var(--accent-color);
+}
+
+.text-on-accent-bg {
+  color: #ffffff;
+  /* White text for contrast on accent backgrounds - works in both themes since accent is always blue */
+}
+
+.text-error {
+  color: var(--error-text);
+}
+
+.text-success {
+  color: var(--success-text);
+}
+
+.text-warning {
+  color: var(--warning-text);
+}
+
+.text-info {
+  color: var(--info-text);
+}
+
+.bg-error {
+  background-color: var(--error-bg);
+}
+
+.bg-success {
+  background-color: var(--success-bg);
+}
+
+.bg-warning {
+  background-color: var(--warning-bg);
+}
+
+.bg-info {
+  background-color: var(--info-bg);
+}
+
+.border-error {
+  border-color: var(--error-color);
+}
+
+.border-success {
+  border-color: var(--success-color);
+}
+
+.border-warning {
+  border-color: var(--warning-color);
+}
+
+.border-info {
+  border-color: var(--info-color);
+}
+
+.border-border {
+  border-color: var(--border-color);
+}
+
+.bg-selection {
+  background-color: var(--selection-bg);
+}
+
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+.panel-surface {
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.panel-surface-muted {
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-100);
+  box-shadow: 0 10px 30px -15px rgba(15, 23, 42, 0.5);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-100);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+select.form-input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 1rem) 0.7rem, calc(100% - 0.6rem) 0.7rem;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+
+.table-surface {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-primary);
+}
+
+.table-surface th,
+.table-surface td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+select,
+input,
+textarea {
+  border-color: var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+select option {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent-color);
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-colors;
+  color: #ffffff;
+  background: linear-gradient(120deg, #6366f1, #3b82f6, #06b6d4);
+  box-shadow: 0 20px 40px -20px rgba(59, 130, 246, 0.8);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.card {
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.portal-shell {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, var(--accent-soft), transparent 42%), var(--background);
+  color: var(--text-primary);
+}
+
+.portal-topbar {
+  border-bottom: 1px solid var(--border-color);
+  background-color: color-mix(in srgb, var(--surface-primary) 94%, transparent);
+  color: var(--text-primary);
+}
+
+.portal-sidebar {
+  border-color: var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+.portal-card,
+.portal-subcard,
+.portal-accent-panel {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.portal-card {
+  background-color: var(--surface-primary);
+  box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.45);
+}
+
+.portal-card-selected {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 18px 40px -28px rgba(15, 23, 42, 0.45);
+}
+
+.portal-subcard {
+  background-color: var(--surface-100);
+}
+
+.portal-accent-panel {
+  border-color: var(--accent-border);
+  background-color: var(--accent-soft);
+}
+
+.portal-brand-mark {
+  background-color: var(--accent-color);
+  color: var(--text-on-accent);
+}
+
+.portal-brand-dot {
+  border-color: var(--surface-primary);
+  background-color: var(--success-color);
+}
+
+.portal-title {
+  color: var(--text-primary);
+}
+
+.portal-copy,
+.portal-meta {
+  color: var(--text-muted);
+}
+
+.portal-eyebrow,
+.portal-label {
+  color: var(--text-muted);
+}
+
+.portal-code {
+  color: var(--text-muted);
+}
+
+.portal-link {
+  color: var(--accent-color);
+}
+
+.portal-link:hover {
+  color: var(--accent-hover);
+}
+
+.portal-badge,
+.portal-badge-success {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.portal-badge {
+  background-color: var(--surface-100);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.portal-badge-success {
+  gap: 0.25rem;
+  border-color: color-mix(in srgb, var(--success-color) 35%, transparent);
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  font-weight: 600;
+}
+
+.portal-status-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--success-color);
+}
+
+.portal-button-primary,
+.portal-button-secondary,
+.portal-button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.portal-button-primary {
+  background-color: var(--accent-color);
+  color: var(--text-on-accent);
+}
+
+.portal-button-primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.portal-button-secondary {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+.portal-button-secondary:hover:not(:disabled) {
+  background-color: var(--surface-100);
+}
+
+.portal-button-danger {
+  border: 1px solid color-mix(in srgb, var(--error-color) 35%, transparent);
+  background-color: var(--surface-primary);
+  color: var(--error-text);
+}
+
+.portal-button-danger:hover:not(:disabled) {
+  background-color: var(--error-bg);
+}
+
+.portal-button-primary:disabled,
+.portal-button-secondary:disabled,
+.portal-button-danger:disabled {
+  cursor: not-allowed;
+  border-color: var(--border-color);
+  background-color: var(--surface-200);
+  color: var(--text-muted);
+}
+
+.portal-input,
+.portal-select {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.portal-input:focus,
+.portal-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.portal-input:disabled,
+.portal-select:disabled {
+  cursor: not-allowed;
+  background-color: var(--surface-100);
+  color: var(--text-muted);
+}
+
+.portal-nav-link {
+  border: 1px solid transparent;
+  color: var(--text-muted);
+}
+
+.portal-nav-link:hover {
+  border-color: var(--border-color);
+  background-color: var(--surface-100);
+  color: var(--text-primary);
+}
+
+.portal-nav-link-active {
+  border-color: var(--accent-border);
+  background-color: var(--accent-soft);
+  color: var(--accent-color);
+  box-shadow: 0 8px 24px -20px rgba(15, 23, 42, 0.55);
+}
+
+.portal-nav-pill {
+  color: var(--text-muted);
+}
+
+.portal-nav-pill:hover {
+  background-color: var(--surface-100);
+  color: var(--text-primary);
+}
+
+.portal-nav-pill-active {
+  background-color: var(--accent-soft);
+  color: var(--accent-color);
+}
+
+.portal-chip {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-muted);
+}
+
+.portal-chip-active {
+  border-color: var(--accent-border);
+  background-color: var(--accent-soft);
+  color: var(--accent-color);
+}
+
+.portal-divider {
+  border-color: var(--border-color);
+}
+
+.portal-divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-top: 1px solid var(--border-color);
+}
+
+.portal-alert-success,
+.portal-alert-error,
+.portal-alert-warning {
+  border: 1px solid;
+  border-radius: 0.5rem;
+}
+
+.portal-alert-success {
+  border-color: color-mix(in srgb, var(--success-color) 35%, transparent);
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.portal-alert-error {
+  border-color: color-mix(in srgb, var(--error-color) 35%, transparent);
+  background-color: var(--error-bg);
+  color: var(--error-text);
+}
+
+.portal-alert-warning {
+  border-color: color-mix(in srgb, var(--warning-color) 38%, transparent);
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.portal-secret-code,
+.portal-preview-chrome {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+.portal-flow {
+  border-color: var(--accent-border);
+  background-color: var(--accent-soft);
+}
+
+.portal-flow-node {
+  border-color: var(--accent-border);
+  background-color: var(--surface-primary);
+}
+
+.portal-flow-icon {
+  background-color: var(--accent-soft);
+  color: var(--accent-color);
+}
