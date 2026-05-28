@@ -16,11 +16,17 @@ function safeNextPath(value: string | undefined): string {
 export default async function LoginPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const nextPath = safeNextPath(firstParam(params.next));
+  const clientId = firstParam(params.client_id);
+  const appName = firstParam(params.app_name);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-app px-6 py-10">
       <div className="w-full max-w-md">
-        <ClientCredentialsLoginForm nextPath={nextPath} />
+        <ClientCredentialsLoginForm
+          nextPath={nextPath}
+          initialClientId={clientId}
+          appName={appName}
+        />
       </div>
     </main>
   );
