@@ -3,12 +3,23 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function ClientCredentialsLoginForm({ nextPath }: { nextPath: string }) {
+type ClientCredentialsLoginFormProps = {
+  nextPath: string;
+  initialClientId?: string;
+  appName?: string;
+};
+
+export function ClientCredentialsLoginForm({
+  nextPath,
+  initialClientId,
+  appName,
+}: ClientCredentialsLoginFormProps) {
   const router = useRouter();
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(initialClientId ?? "");
   const [clientSecret, setClientSecret] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedAppName = appName?.trim();
 
   async function submitCredentials(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,10 +56,18 @@ export function ClientCredentialsLoginForm({ nextPath }: { nextPath: string }) {
       <div className="space-y-2 text-center">
         <div className="text-2xl font-bold text-foreground">Legends of Learning</div>
         <div className="text-sm font-semibold uppercase tracking-wider text-muted">REST API Showcase</div>
-        <h1 className="pt-4 text-3xl font-bold text-foreground">Connect one test app</h1>
+        <h1 className="pt-4 text-3xl font-bold text-foreground">
+          {selectedAppName ? `Connect ${selectedAppName}` : "Connect one test app"}
+        </h1>
         <p className="text-sm leading-6 text-muted">
           Use OAuth client credentials from a Legends app to run the public sample flows locally.
         </p>
+        {initialClientId ? (
+          <div className="mx-auto mt-3 max-w-full rounded-lg border border-border bg-surface-100 px-3 py-2 text-left">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Selected app</div>
+            <code className="mt-1 block break-all text-xs text-foreground">{initialClientId}</code>
+          </div>
+        ) : null}
       </div>
 
       {error ? (
