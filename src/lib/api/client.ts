@@ -1,6 +1,6 @@
 /**
  * API Client for Legends of Learning API
- * OpenAPI Spec: https://api.smartlittlecookies.com/api/v3/docs/openapi
+ * OpenAPI Spec: https://api.legendsoflearning.com/api/v3/docs/openapi
  *
  * SECURITY NOTICE:
  * This is a SERVER-SIDE ONLY client that handles OAuth2 client credentials flow.

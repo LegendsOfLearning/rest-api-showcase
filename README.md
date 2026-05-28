@@ -65,9 +65,9 @@ pnpm install
 Create `.env` in the repo root:
 
 ```env
-LEGENDS_API_URL=https://api.smartlittlecookies.com/api
+LEGENDS_API_URL=https://api.legendsoflearning.com/api
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_LEGENDS_OPENAPI_SPEC_URL=https://api.smartlittlecookies.com/api/v3/docs/openapi
+NEXT_PUBLIC_LEGENDS_OPENAPI_SPEC_URL=https://api.legendsoflearning.com/api/v3/docs/openapi
 ```
 
 The OpenAPI URL is optional and defaults to the production spec above. The app asks for the OAuth client ID and client secret on the local login page. Do not commit credentials or `.env` files.
@@ -127,7 +127,7 @@ chore(docs): update source map
 ## Documentation
 
 - API documentation notes: `docs/api-documentation.md`
-- OpenAPI spec: `https://api.smartlittlecookies.com/api/v3/docs/openapi`
+- OpenAPI spec: `https://api.legendsoflearning.com/api/v3/docs/openapi`
 
 ## License
 
