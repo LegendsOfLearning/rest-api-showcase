@@ -9,7 +9,7 @@ import type { AssignmentJoinTarget } from "@/types/api";
  *
  * Example:
  * Frontend request: /api/users
- * Becomes: https://api.smartlittlecookies.com/api/v3/users
+ * Becomes: https://api.legendsoflearning.com/api/v3/users
  *
  * IMPORTANT:
  * 1. Frontend code should NEVER include /v3 in requests
@@ -18,7 +18,7 @@ import type { AssignmentJoinTarget } from "@/types/api";
  */
 
 // Base URL and version from environment variable, with fallback
-const API_BASE_URL = process.env.LEGENDS_API_URL || "https://api.smartlittlecookies.com/api";
+const API_BASE_URL = process.env.LEGENDS_API_URL || "https://api.legendsoflearning.com/api";
 const API_VERSION = process.env.LEGENDS_API_VERSION || "v3";
 
 export const API_ENDPOINTS = {

@@ -19,7 +19,7 @@ function isLocalApiBase(value: string): boolean {
 export function legendsApiBaseUrl(): string {
   const configuredBase = process.env.LEGENDS_API_URL || "";
   const defaultDevBase = `http://localhost:${detectAiPort()}/api`;
-  const defaultProdBase = "https://api.smartlittlecookies.com/api";
+  const defaultProdBase = "https://api.legendsoflearning.com/api";
 
   if (process.env.NODE_ENV === "development") {
     return stripTrailingSlash(isLocalApiBase(configuredBase) ? configuredBase : defaultDevBase);

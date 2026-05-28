@@ -1,9 +1,9 @@
 # Legends API Documentation
 
 ## API Overview
-- Base URL: https://api.smartlittlecookies.com/api (production)
+- Base URL: https://api.legendsoflearning.com/api (production)
 - API Version: v3 (automatically added to all requests)
-- OpenAPI Spec: https://api.smartlittlecookies.com/api/v3/docs/openapi
+- OpenAPI Spec: https://api.legendsoflearning.com/api/v3/docs/openapi
 
 ## Authentication
 - Uses 2-legged OAuth (client credentials flow)
@@ -11,7 +11,7 @@
 - The local login page asks for one app's OAuth client ID and client secret. Do not commit those values.
 - `.env` only needs the API base URL for local runs:
   ```
-  LEGENDS_API_URL=https://api.smartlittlecookies.com/api  # No /v3 suffix
+  LEGENDS_API_URL=https://api.legendsoflearning.com/api  # No /v3 suffix
   ```
 
 ## Assignment Creation Flow
