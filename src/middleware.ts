@@ -8,7 +8,9 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/docs/' ||
     request.nextUrl.pathname === '/api/reference/openapi' ||
     request.nextUrl.pathname === '/login' ||
+    request.nextUrl.pathname === '/sso' ||
     request.nextUrl.pathname === '/api/auth/login' ||
+    request.nextUrl.pathname === '/api/auth/session' ||
     request.nextUrl.pathname === '/api/auth/logout'
   ) {
     return NextResponse.next();
