@@ -1279,15 +1279,15 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                         Fluency Session
                       </p>
                       <h4 className="text-xl font-semibold text-foreground">
-                        Build an exact fact set
+                        Build a practice fact pool
                       </h4>
                       <p className="text-sm text-muted mt-2 max-w-xl">
-                        Choose a standard, enter the precise Math Basecamp
-                        facts, and launch directly into Awakening.
+                        Choose a standard, configure the Math Basecamp fact
+                        pool, and launch directly into Awakening.
                       </p>
                     </div>
                     <div className="hidden items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-2 text-xs text-foreground/80 md:flex">
-                      <span>Exact facts</span>
+                      <span>Fact pool</span>
                       <span className="h-1 w-1 rounded-full bg-foreground/40" />
                       <span>Instant launch</span>
                     </div>
@@ -1361,7 +1361,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                         Fact Builder
                       </label>
                       <p className="text-xs text-muted mt-1">
-                        Students will practice exactly these equations.
+                        Practice questions are sampled from this fact pool.
                       </p>
                     </div>
                     <button
@@ -1664,7 +1664,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                           >
                             <div className="font-medium">Fluency Facts</div>
                             <div className="text-xs text-muted mt-0.5">
-                              Sends `awakening_fluency` with exact facts
+                              Sends `awakening_fluency` with a configured fact pool
                             </div>
                           </button>
                         </div>
@@ -1832,7 +1832,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                 Fluency Facts
                               </div>
                               <div className="text-xs text-muted mt-0.5">
-                                Students will practice exactly these facts.
+                                Practice questions are sampled from this fact pool.
                                 Division facts must resolve to whole numbers.
                               </div>
                             </div>
