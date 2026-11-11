@@ -1,9 +1,8 @@
-"use client";
-
 import { AssignmentLauncher } from '@/components/assignments/AssignmentLauncher';
 import Link from 'next/link';
 
-export default function AssignmentsBuildPage() {
+export default async function AssignmentsBuildPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
+  const params = await searchParams;
   return (
     <div className="w-full">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -11,7 +10,7 @@ export default function AssignmentsBuildPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Build Assignment</h1>
-            <p className="text-sm text-muted mt-2">Create new assignments with standards, content, or multi-activity combinations</p>
+            <p className="text-sm text-muted mt-2">Create new assignments with standards, content, fluency, or multi-activity combinations</p>
           </div>
           <Link
             href="/assignments"
@@ -23,7 +22,7 @@ export default function AssignmentsBuildPage() {
 
         {/* Builder Component */}
         <div className="rounded-xl border border-border bg-surface p-6">
-          <AssignmentLauncher />
+          <AssignmentLauncher initialType={params.type === "fluency" ? "fluency" : "standard"} />
         </div>
       </div>
     </div>

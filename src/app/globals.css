@@ -558,3 +558,19 @@ input[type="checkbox"] {
   background-color: var(--accent-soft);
   color: var(--accent-color);
 }
+
+/* The public guide renders the maintained repository Markdown. */
+.api-docs { line-height: 1.75; overflow-wrap: anywhere; }
+.api-docs h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
+.api-docs h2 { font-size: 1.5rem; font-weight: 650; margin: 2rem 0 0.75rem; }
+.api-docs h3 { font-size: 1.2rem; font-weight: 650; margin: 1.5rem 0 0.5rem; }
+.api-docs p, .api-docs ul, .api-docs ol { margin: 1rem 0; }
+.api-docs ul { list-style: disc; padding-left: 1.5rem; }
+.api-docs ol { list-style: decimal; padding-left: 1.5rem; }
+.api-docs a { color: var(--accent-color); text-decoration: underline; }
+.api-docs code { font-size: 0.85em; background: var(--surface-100); border-radius: 0.25rem; padding: 0.15rem 0.3rem; }
+.api-docs pre { overflow-x: auto; padding: 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem; background: var(--surface-100); }
+.api-docs pre code { padding: 0; background: transparent; }
+.api-docs table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 0.875rem; }
+.api-docs th, .api-docs td { border: 1px solid var(--border-color); padding: 0.65rem; text-align: left; }
+.api-docs th { background: var(--surface-100); }

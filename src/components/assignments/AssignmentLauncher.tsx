@@ -289,9 +289,9 @@ function isJoinTargetUnavailable(
   );
 }
 
-export function AssignmentLauncher() {
+export function AssignmentLauncher({ initialType = "standard" }: { initialType?: AssignmentType }) {
   const [assignmentType, setAssignmentType] =
-    useState<AssignmentType>("standard");
+    useState<AssignmentType>(initialType);
   const [application, setApplication] = useState<ApplicationMeResponse | null>(
     null,
   );
@@ -312,7 +312,7 @@ export function AssignmentLauncher() {
   const [loading, setLoading] = useState(false);
   const [joinUrls, setJoinUrls] = useState<JoinResult[]>([]);
   const [joinTarget, setJoinTarget] = useState<AssignmentJoinTarget>(() =>
-    recommendedJoinTarget("standard"),
+    recommendedJoinTarget(initialType),
   );
   const [assignmentDates, setAssignmentDates] = useState(
     createDefaultAssignmentDates,
