@@ -101,7 +101,7 @@ Business routes enforce the calling application's configured scopes. For resourc
 
 Fluency is a shared Partner API capability. Create an `awakening_fluency` activity through `/assignments`, launch learners through `/assignments/{id}/joins`, and read the existing assignment/player reports. Use the same application credentials and learner identities as other assignment activities.
 
-[Staging Showcase fluency builder](https://api-showcase.legendsoflearning.com/assignments/build?type=fluency) · [Authentication and permissions](https://console.legendsoflearning.com/docs/partner-rest-api) · [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp)
+[Staging Showcase fluency builder](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fassignments%2Fbuild%3Ftype%3Dfluency) · [Authentication and permissions](https://console.legendsoflearning.com/docs/partner-rest-api) · [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp)
 
 Download [the Python API client](https://console.legendsoflearning.com/docs/examples/partner-api/partner_client.py) and [the fluency walkthrough](https://console.legendsoflearning.com/docs/examples/partner-api/fluency_quickstart.py) into the same directory. Run `python3 fluency_quickstart.py --help` for protected credential prompts, staging defaults and explicit-facts/fallback options.
 
