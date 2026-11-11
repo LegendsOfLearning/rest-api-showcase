@@ -47,7 +47,7 @@ Call `POST /assignments` with the creator's external ID and an `activities` arra
 }
 ```
 
-Save `assignment_id`. Use a stable `Idempotency-Key` for retries of the same logical creation; reconcile the existing assignment before making a new logical request. If supplying a schedule, supply both dates. Optional target-user fields require the users to exist; an untargeted assignment can provision learners on first use if your audience policy permits it. The API creates/lists/reads assignments and creates joins; it has no public assignment update/delete operation.
+Save `assignment_id`. This `activities` form supports a stable `Idempotency-Key` for retries of the same logical creation and supports `dry_run`; legacy top-level `type: "standard"` / `type: "content"` requests implement neither feature. Do not assume a legacy retry is deduplicated or a legacy dry run prevents creation; reconcile an uncertain legacy response before retrying. If supplying a schedule, supply both dates. Optional target-user fields require the users to exist; an untargeted assignment can provision learners on first use if your audience policy permits it. The API creates/lists/reads assignments and creates joins; it has no public assignment update/delete operation.
 
 ## 4. Launch one authorized learner
 
