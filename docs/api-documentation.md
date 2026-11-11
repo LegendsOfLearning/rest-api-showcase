@@ -1,392 +1,187 @@
-# Legends API Documentation
+# Partner API quickstart
 
-## API Overview
-- Base URL: https://api.legendsoflearning.com/api (production)
-- API Version: v3 (automatically added to all requests)
-- OpenAPI Spec: https://api.legendsoflearning.com/api/v3/docs/openapi
+Use one shared Partner API to provision app-linked users, create content or Awakening activities, launch individual learners, and retrieve results. Fluency uses this assignment flow. Partner-specific selection, identity handoff and commercial terms belong in your integration agreement.
 
-## Authentication
-- Uses 2-legged OAuth (client credentials flow)
-- Token endpoint: `/v3/oauth2/token`
-- The local login page asks for one app's OAuth client ID and client secret. Do not commit those values.
-- `.env` only needs the API base URL for local runs:
-  ```
-  LEGENDS_API_URL=https://api.legendsoflearning.com/api  # No /v3 suffix
-  ```
+[Open the staging Showcase](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fpartners) · [Fluency assignment walkthrough](https://console.legendsoflearning.com/docs/fluency-assignments) · [API reference](https://console.legendsoflearning.com/docs/partner-rest-api)
 
-## Assignment Creation Flow
-1. Create Assignment
-   ```typescript
-   POST /v3/assignments
-   {
-     "type": "standard",           // Required, must be "standard"
-     "standard_id": number,        // Required, must be numeric
-     "application_user_id": string // Required, use student ID
-   }
-   ```
+## 1. Connect the intended application
 
-2. Get Join Links
-   ```typescript
-   POST /v3/assignments/{assignment_id}/join
-   {
-     "application_user_id": string, // Student's ID
-     "target": "awakening"         // Required, must be "awakening"
-   }
-   ```
+| Environment | REST API base | Partner MCP |
+| --- | --- | --- |
+| Staging / test | `https://api.smartlittlecookies.com/api/v3` | `https://api.smartlittlecookies.com/partner/mcp` |
+| Production | `https://api.legendsoflearning.com/api/v3` | `https://api.legendsoflearning.com/partner/mcp` |
 
-## Common Gotchas
-1. API URL Structure
-   - Base URL should NOT include `/v3`
-   - `/v3` is added automatically to all API requests
-   - Token endpoint is at `/v3/oauth2/token`
-   - Assignment endpoint is at `/v3/assignments`
+Use separate applications and credentials for each environment. In the Showcase, select **Staging / test** for synthetic development and check the visible environment/application after login. The `app.smartlittlecookies.com` and `app.legendsoflearning.com` aliases also serve the corresponding API; the bases above are the canonical examples here.
 
-2. Standard IDs
-   - Must be numbers in API calls
-   - Convert string IDs: `parseInt(standard_id, 10)`
-   - Validate: `if (isNaN(standardId)) throw error`
+Your backend exchanges its `client_id` and `client_secret` at `POST /oauth2/token`, relative to that REST base, with `grant_type=client_credentials`. Send `Authorization: Bearer {access_token}` on subsequent requests. Use the returned `expires_in`; acquire a token again when needed rather than inventing a refresh-token flow. Verify `GET /applications/me` identifies the expected app before writes.
 
-3. User IDs
-   - Always use `application_user_id`
-   - Never use internal IDs for API calls
-   - Format: string (e.g., "demo-student-1")
+The issuer may return an already active application token. Clearing a browser/client session must not revoke it: other clients may share it. Intentional `/oauth2/revoke` is an invalidation of that token for all clients sharing it, not routine cleanup. Keep credentials/tokens in protected server storage and out of browser code, prompts, logs and shared documents.
 
-4. Assignment Creation
-   - No teacher ID needed (handled by API key)
-   - Use student's ID as `application_user_id`
-   - Must specify `type: "standard"`
+Console workspace membership, OAuth application credentials and separately managed service API keys are distinct. A service key is not a `client_secret`. [Registration](https://console.legendsoflearning.com/docs/registration) explains access; [permissions](https://console.legendsoflearning.com/docs/partner-rest-api#permissions) describes the application scope boundary.
 
-5. Join Links
-   - Separate request per student
-   - Must specify `target: "awakening"`
-   - Returns `join_url` not `launch_url`
+## 2. Resolve stable users and choose the activity
 
-## User Management
+Use external `application_user_id` values scoped to your application and a trusted tenant/identity mapping. Internal numeric user IDs are different identifiers. Authorize the creator and audience on your backend; do not accept a student identity from an untrusted launch query.
 
-### Create User
-```typescript
-POST /v3/users
+Create or retrieve the creator and learner through `/users`. Teacher creation requires nonempty `first_name` and `last_name`; synthetic examples can use fictional names. Linking an existing same-role account by email/Google identity is different from creating a new account and does not itself permit partner sign-in. Protected staff and relevant email-linked existing accounts can return 403 for login/join; recover with direct Legends sign-in. Do not rename or replace the underlying identity of a linked account. See [identity and launch](https://console.legendsoflearning.com/docs/partner-rest-api#identity-and-launch).
+
+Choose an activity supported by the contract:
+
+| Activity | Request entry |
+| --- | --- |
+| Content | `content_id` and its applicable `standard_id` |
+| Fluency | `type: "awakening_fluency"`, `standard_id`, optional `fluency_facts` |
+| Other Awakening activities | Explicit mastery, focus or timed type; timed also needs `play_duration_seconds` |
+
+Discover current IDs with `/standard_sets`, `/standard_sets/{id}/standards`, `/content` or `/searches`. Standard-set IDs are strings and must be URL-encoded; standards/content IDs are numeric. For search, use `hits[].content.id` or `hits[].standard.id`; the outer `hits[].id` is a fresh display UUID. Collection envelopes/pagination differ: standard sets use `results`, standards/content use `entries`; content uses `per_page`, standards use `page_size`.
+
+## 3. Create the approved assignment
+
+Call `POST /assignments` with the creator's external ID and an `activities` array. Use returned catalog IDs; numbers below are illustrative:
+
+```json
 {
-  "application_user_id": string,  // Required
-  "role": "teacher" | "student",  // Required
-  "first_name": string,           // Optional
-  "last_name": string,            // Optional
-  "google_sub": string,           // Optional - Google subject identifier (see "Google OAuth Identity Verification" section below)
-  "email": string                 // Optional - Email address. If provided and a user with this email already exists, the existing user will be linked to this application instead of creating a new user. Email matching is case-insensitive.
+  "application_user_id": "partner-test-teacher-001",
+  "name": "Practice",
+  "activities": [{"content_id": 1234, "standard_id": 5678}]
 }
 ```
 
-**Response:**
-```typescript
+Save `assignment_id`. Use a stable `Idempotency-Key` for retries of the same logical creation; reconcile the existing assignment before making a new logical request. If supplying a schedule, supply both dates. Optional target-user fields require the users to exist; an untargeted assignment can provision learners on first use if your audience policy permits it. The API creates/lists/reads assignments and creates joins; it has no public assignment update/delete operation.
+
+## 4. Launch one authorized learner
+
+Create or resolve the learner when needed, then call **plural** `POST /assignments/{id}/joins`:
+
+```json
+{"application_user_id":"partner-test-student-001","target":"awakening"}
+```
+
+Use Awakening for fluency/standard activities. The API also accepts `web` for supported content experiences. Send the individual learner to the returned `join_url` exactly as returned; do not share it across students or publish it in a lesson resource. Current assignment tokens last 24 hours. Standalone `/users/login_link` has a separate 10-second default, configurable up to 300 seconds; it is not the same launch contract. No default iframe integration is established by these URLs.
+
+## 5. Read the results that exist
+
+Read `GET /assignments/{id}?view=player&page=1&page_size=10&include=activities,players`, then `GET /students/{application_user_id}?view=assignment&page=1&page_size=10` when learner history is needed.
+
+Only the assignment's `players` envelope is paginated. Aggregate arrays such as `by_player` are separate and can contain one row per PlayerActivity, including multiple activity rows for the same learner; do not count them as one combined row per learner. Activity detail includes answered/correct counts, correctness percentage, recorded playtime seconds and start/completion fields. A zero-answer percentage can be null; a configured duration is not observed playtime. See [reporting](https://console.legendsoflearning.com/docs/partner-rest-api#reporting).
+
+Learner/standard reports first resolve app-linked learners but may aggregate their broader nondeleted activity history, including native/shared/migrated activity. They are not guaranteed to contain only assignments created by your application or a requested date window. Assignment access is based on creator membership in the calling app; it is not an immutable origin tag.
+
+For fluency, returned `fluency_facts` are the configured exercise pool, not measured per-fact mastery. There is no public per-fact attempts, latency, trial history or adaptive-progress contract. Verify populated results with actual synthetic play before promising a results-dependent pilot, gradebook update or webhook workflow.
+
+## References and examples
+
+- [Fluency: assignment → learner launch → results](https://console.legendsoflearning.com/docs/fluency-assignments)
+- [REST API contract and scopes](https://console.legendsoflearning.com/docs/partner-rest-api)
+- [Partner MCP: server-to-server Bearer client](https://console.legendsoflearning.com/docs/partner-mcp)
+- [Otus Insights addendum](https://console.legendsoflearning.com/docs/otus-insights) — a labeled partner example, not a prerequisite for using the API
+- [Swagger](https://api.smartlittlecookies.com/api/v3/docs/swagger-ui) · [OpenAPI](https://api.smartlittlecookies.com/api/v3/docs/openapi) · [Public Showcase source](https://github.com/LegendsOfLearning/rest-api-showcase)
+
+## Application permissions
+
+
+Business routes enforce the calling application's configured scopes. For the same resource, `access` implies `write`, which implies `read`. For example, `assignments:write` includes `assignments:read`. Requesting a narrower token scope does not create a read-only guarantee when the application still has broader configured grants; use a separately restricted application for that boundary.
+
+| Operations | Required application scope |
+| --- | --- |
+| `GET /applications/me`, `GET /users`, `GET /users/{id}`, `GET /users/{id}/mastery_completed_v2_count` | `users:read` |
+| `POST /users`, `PUT /users/{id}`, `POST /users/login_link` | `users:write` |
+| `GET /standard_sets`, `GET /standard_sets/{id}/standards` | `standards:read` |
+| `GET /content`, `GET /content/{id}` | `content:read` |
+| `GET /content/{id}/reviews` | `content_reviews:read` |
+| `POST /searches` | `searches:write` |
+| `GET /assignments`, `GET /assignments/{id}`, `GET /students/{application_user_id}`, `GET /standards/{id}` | `assignments:read` |
+| `POST /assignments` | `assignments:write` |
+| `POST /assignments/{id}/joins`, `POST /content_links`, `DELETE /content_links/{token}` | `assignment_joins:write` |
+
+[Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp) uses the same grants. Discovering a tool does not grant permission to execute it.
+
+
+## Fluency assignments
+
+Fluency is a shared Partner API capability. Create an `awakening_fluency` activity through `/assignments`, launch learners through `/assignments/{id}/joins`, and read the existing assignment/player reports. No XtraMath-specific app, Insights workflow or separate fluency authentication is required.
+
+[Staging Showcase fluency builder](https://api-showcase.legendsoflearning.com/assignments/build?type=fluency) · [Authentication and permissions](https://console.legendsoflearning.com/docs/partner-rest-api) · [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp)
+
+Download [the Python API client](https://console.legendsoflearning.com/docs/examples/partner-api/partner_client.py) and [the fluency walkthrough](https://console.legendsoflearning.com/docs/examples/partner-api/fluency_quickstart.py) into the same directory. Run `python3 fluency_quickstart.py --help` for protected credential prompts, staging defaults and explicit-facts/fallback options.
+
+### Before you start
+
+Use the designated staging application and synthetic teacher/student identities. Check `/applications/me`; ensure effective user, standard, assignment and join scopes. Application `write` implies `read` for the same resource. A narrower requested token scope is not a substitute for configuring a restricted application's grants.
+
+All paths below are relative to `https://api.smartlittlecookies.com/api/v3`. Discover a real numeric `standard_id` through `/standard_sets/{set_id}/standards`; the numeric ID in the JSON below is illustrative. Register the creator and learner through `/users` with stable external IDs; include nonempty teacher names. Existing-account sign-in restrictions still apply.
+
+### 1. Create a fluency assignment
+
+Send `POST /assignments` with an idempotency key for this logical assignment:
+
+```json
 {
-  "user_id": number
+  "application_user_id": "partner-test-teacher-001",
+  "name": "Arithmetic practice",
+  "activities": [{
+    "type": "awakening_fluency",
+    "standard_id": 1234,
+    "fluency_facts": [
+      {"a": 3, "b": 4, "op": "add"},
+      {"a": 14, "b": 6, "op": "sub"},
+      {"a": 6, "b": 7, "op": "mul"},
+      {"a": 12, "b": 3, "op": "div"}
+    ]
+  }]
 }
 ```
 
-**Behavior:**
-- If `email` is provided and a user with that email exists (case-insensitive), the existing user is linked to the application (role must match)
-- If `google_sub` is provided and a user with that `google_unique_id` exists, the existing user is linked to the application
-- If `google_sub` is provided but no user exists, a new user is created with `google_unique_id` set
-- If `email` is provided but no user exists, a new user is created normally
-- If `google_sub` is provided, it is also stored as a claim on the application link. When the user later signs in via Google OAuth (`auth: "google"`), the Google account must match this `google_sub` or the sign-in is rejected with `google_identity_mismatch`. See **Google OAuth Identity Verification** below.
-- Returns 422 error if:
-  - User with `email` exists but has different role
-  - User with `google_sub` exists but has different role
-  - User with `application_user_id` already exists with different params
-  - User with `google_sub` already linked to different `application_user_id`
+The response contains `assignment_id`. Operands must be integers; operations are `add`, `sub`, `mul`, `div`. Division requires a nonzero divisor and an integer quotient. Invalid facts return 422.
 
-### Create Login Link (no assignment)
-```typescript
-POST /v3/users/login_link
-{
-  "application_user_id": string,      // Required
-  "role": "teacher" | "student",      // Required if user does not exist
-  "first_name": string | null,        // Optional, used when creating user
-  "last_name": string | null,         // Optional, used when creating user
-  "target": "auto" | "awakening" | "teacher_app",
-  "ttl_seconds": number,              // Optional, defaults to 10s, max 300s
-  "auth": "google",                   // Optional - require Google sign-in before entering Legends
-  "destination": "dashboard" | "awakening_leaderboard",  // Optional - where to land after sign-in
-  "return_url": string,               // Optional - your callback URL for redirect after sign-in or on error
-  "google_sub": string,               // Optional - Google subject identifier. Used when creating the user if they don't already exist.
-  "email": string                     // Optional - Email address. If provided and a user with this email already exists, the existing user will be linked to this application instead of creating a new user. Email matching is case-insensitive. Used when creating the user if they don't already exist.
-}
+A nonempty explicit `fluency_facts` list takes precedence over the learner's current focus. The list is an exercise pool: the runtime samples facts and does not promise every configured fact is attempted. If facts are omitted or empty, fluency falls back to the persisted Math Basecamp daily-target/practice mix; an empty list does not request zero practice. That fallback depends on learner state. The compatibility `facts` alias exists, but use `fluency_facts` for new clients.
+
+`awakening_mastery`, `awakening_focus` and `awakening_timed` are distinct activity types. Timed requires positive `play_duration_seconds`; configured duration is not measured time spent. These types do not create a partner-facing assessment/trial-submission engine or let the partner reset global adaptive progression.
+
+### 2. Launch the learner into Awakening
+
+Send `POST /assignments/{assignment_id}/joins`:
+
+```json
+{"application_user_id":"partner-test-student-001","target":"awakening"}
 ```
 
-**Behavior:**
-- Automatically creates the user if `application_user_id` does not exist (role required)
-- If `email` is provided and a user with that email exists (case-insensitive), the existing user is linked to the application (role must match)
-- If `google_sub` is provided and a user with that `google_unique_id` exists, the existing user is linked to the application
-- `target: "auto"` sends teachers to the teacher app and students to Awakening
-- Teachers may choose `awakening` to jump straight into player mode
-- Students cannot target `teacher_app` (422 response)
-- Links default to a 10-second TTL; you can extend up to 300 seconds via `ttl_seconds`
-- When `auth: "google"` is set, the login link will redirect the user through Google OAuth before signing them in. If the user cancels or the Google account doesn't match, we redirect to your `redirect_uri` with an `error` query parameter (see **Google OAuth Identity Verification** below)
+Resolve the learner and their authorized audience on your backend. Return the generated `join_url` only to that learner and open it exactly as returned. Keep it out of prompts, logs, screenshots and shared resources. Assignment joins currently expire after 24 hours; generate them on demand.
 
-**Client Pattern:**
-```typescript
-import { ensureUserAndLoginLink } from '@/lib/api/loginLink';
+The Showcase's fluency builder supports an explicit fact pool and selects Awakening. Use the API walkthrough to exercise omitted-facts fallback; the builder does not claim to configure the persisted daily practice mix.
 
-const loginLink = await ensureUserAndLoginLink(
-  {
-    application_user_id: 'student-123',
-    role: 'student',
-    first_name: 'Demo',
-    last_name: 'Student'
-  },
-  { target: 'awakening' }  // optional, defaults to 'auto'
-);
+### 3. Read assignment and learner results
 
-window.location.href = loginLink.join_url;
-```
+Use `GET /assignments/{id}?view=player&include=activities,players&page=1&page_size=10`. Follow `players` pagination. Its `entries[].activities[]` can include:
 
-See `src/lib/api/loginLink.ts` for a reusable helper that:
-1. Calls `POST /v3/users` to create/idempotently update the user
-2. Calls `POST /v3/users/login_link`
-3. Returns the `join_url` so you can redirect immediately
+| Field | Meaning |
+| --- | --- |
+| `id`, `type` | Activity identity and type |
+| `total_answered`, `total_correct` | Recorded activity counts |
+| `percent_correct` | Percentage from recorded counts; may be null when no questions were answered |
+| `reported_playtime_sec` | Recorded playtime in seconds |
+| `started_at`, `completed_at` | Recorded activity timestamps; completion can be absent |
 
-## Type Definitions
-```typescript
-interface UserCreateRequest {
-  application_user_id: string;
-  role: 'teacher' | 'student';
-  first_name?: string;
-  last_name?: string;
-  google_sub?: string;  // Optional - Google subject identifier
-  email?: string;       // Optional - Email address. If provided and a user with this email already exists, the existing user will be linked to this application instead of creating a new user. Email matching is case-insensitive.
-}
+`by_player` is a separate aggregate view derived from PlayerActivity rows and may contain several rows per learner. It is not the paginated player-detail envelope. Read `/students/{application_user_id}?view=assignment` for learner assignment history, with the broader-history boundary in the [reporting contract](https://console.legendsoflearning.com/docs/partner-rest-api#reporting).
 
-interface UserCreateResponse {
-  user_id: number;
-}
+The assignment's returned `fluency_facts` describes configuration. It does **not** report mastery, attempts or latency for each fact. There is no dedicated public per-fact fluency analytics/trial-history API, and total V2 mastery stars from `/users/{id}/mastery_completed_v2_count` are not a count of fluent arithmetic facts.
 
-interface User {
-  id: number;
-  application_user_id: string;
-  role: 'teacher' | 'student';
-  first_name: string | null;
-  last_name: string | null;
-}
+### Verify a populated pilot
 
-interface AssignmentCreateRequest {
-  type: 'standard';
-  standard_id: number;
-  application_user_id: string;
-}
+Use two authorized synthetic learners, explicit facts and omitted-facts fallback. Check assignment creation/idempotency, individual Awakening launch, actual practice and populated result fields against the agreed definition. Successful creation, a launch shell or an empty report alone does not prove gameplay completion or adaptive/per-fact analytics. Agree additional reporting needs before promising them.
 
-interface AssignmentCreateResponse {
-  assignment_id: number;
-}
+## Partner MCP authentication
 
-interface AssignmentJoinRequest {
-  application_user_id: string;
-  target: 'awakening';
-}
+Partner MCP uses the same environment-specific application access token in an explicit `Authorization: Bearer` header. Your backend obtains/renews it via `grant_type=client_credentials`. The endpoint URL alone does not provide interactive ChatGPT/browser consent, OAuth client registration or a partner refresh flow. Staff MCP OAuth is separate. Keep tokens out of tool arguments. [Connection guide](https://console.legendsoflearning.com/docs/partner-mcp).
 
-interface AssignmentJoinResponse {
-  join_url: string;
-}
+## Reuse with a coding agent
 
-interface LaunchResponse {
-  assignment_id: number;
-  student_links: {
-    student_id: string;
-    launch_url: string;
-  }[];
-}
-```
+Read this maintained guide and the environment’s live OpenAPI before copying code. Give the agent no credentials, user records or launch URLs. Store credentials through your protected backend setup. Reuse the server-side endpoint/proxy pattern rather than browser cookies or this demo’s authentication as a production identity model. Verify authorization, idempotent retries and populated results in your own application.
 
-## Google OAuth Identity Verification
+- `src/app/api/auth/login/route.ts`: allowlisted environment-specific client-credentials exchange.
+- `src/app/api/[...legends]/route.ts`: server-only Bearer proxy.
+- `src/lib/api/endpoints.ts`: REST endpoint helpers.
+- `src/components/assignments/AssignmentLauncher.tsx`: teacher-created assignments, fluency and plural joins.
+- `src/app/api/auth/logout/route.ts`: local cookie cleanup without revoking shared application tokens.
 
-When you use `auth: "google"` in a login link, the user is redirected to Google to sign in before entering Legends. We verify that the Google account they authenticate with matches the identity you expect. This prevents users from signing in with the wrong Google account or one that belongs to someone else.
-
-### How It Works
-
-1. You create a user with an optional `google_sub` (the `sub` claim from Google's ID token — a stable unique identifier for a Google account)
-2. You create a login link with `auth: "google"`
-3. User is redirected to Google's consent screen
-4. User signs in with Google
-5. We verify the Google account matches, link it, and redirect back to your `redirect_uri`
-
-### What Gets Verified
-
-Two checks are performed when the user completes Google sign-in:
-
-1. **Partner claim check** — If you provided a `google_sub` when creating the user, the Google account they sign in with must have the same `sub` value. This lets you enforce that a specific Google account is used.
-
-2. **Existing link check** — If the user already has a linked Google account from a previous sign-in, the new sign-in must use the same Google account. This prevents account takeover.
-
-Both checks must pass. If either fails, the user is redirected back to your `redirect_uri` with an error code.
-
-### Creating a Login Link with Google Auth
-
-```typescript
-POST /v3/users/login_link
-{
-  "application_user_id": "teacher-42",
-  "target": "teacher_app",
-  "auth": "google",               // Requires Google sign-in
-  "destination": "dashboard",     // Optional - where to land after sign-in
-  "return_url": "https://your-app.com/callback"  // Optional - where to redirect back on completion or error
-}
-```
-
-The response contains a `join_url` that, when visited, will redirect the user through Google OAuth before signing them in to Legends.
-
-### Providing `google_sub` at User Creation
-
-You can lock a user to a specific Google account by providing `google_sub` when creating them:
-
-```typescript
-POST /v3/users
-{
-  "application_user_id": "teacher-42",
-  "role": "teacher",
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "google_sub": "110248495921238986420"  // From Google's ID token
-}
-```
-
-After this, any Google sign-in for this user **must** use the Google account with sub `110248495921238986420`. Signing in with any other Google account will be rejected with `google_identity_mismatch`.
-
-**When you don't provide `google_sub`:** The user can sign in with any Google account on their first sign-in. That account is then linked, and all subsequent sign-ins must use the same account.
-
-### OAuth Error Codes
-
-When something goes wrong during the Google OAuth flow, we redirect to your `redirect_uri` (or `return_url`) with an `error` query parameter:
-
-```
-https://your-app.com/callback?error=<error_code>
-```
-
-| Error Code | HTTP Context | Description |
-|------------|-------------|-------------|
-| `google_denied` | User action | User clicked "Cancel" or "No" on Google's consent screen, or closed the popup. |
-| `google_identity_mismatch` | Verification failed | The Google account doesn't match. Either it doesn't match the `google_sub` you provided at user creation, or the user previously linked a different Google account. |
-| `google_link_failed` | Constraint error | The Google account is already linked to a different Legends user. Two users cannot share the same Google account. |
-| `google_auth_failed` | Token error | Google's token could not be verified. May be expired or malformed. Usually transient. |
-
-### Handling Errors
-
-```typescript
-// In your callback handler
-const url = new URL(window.location.href);
-const error = url.searchParams.get('error');
-
-if (error) {
-  switch (error) {
-    case 'google_denied':
-      // User cancelled — offer to retry
-      showMessage('Google sign-in was cancelled. Please try again.');
-      break;
-
-    case 'google_identity_mismatch':
-      // Wrong Google account — tell them which account to use
-      showMessage('You signed in with the wrong Google account. Please try again with the correct account.');
-      break;
-
-    case 'google_link_failed':
-      // Google account belongs to someone else
-      showMessage('This Google account is already linked to another user. Please use a different Google account.');
-      break;
-
-    case 'google_auth_failed':
-      // Transient error — retry
-      showMessage('Google authentication failed. Please try again.');
-      break;
-
-    default:
-      showMessage('An error occurred. Please try again.');
-  }
-}
-```
-
-### Full Example: Google OAuth Login Flow
-
-```typescript
-// 1. Create user with google_sub (optional but recommended)
-await fetch('/v3/users', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-  body: JSON.stringify({
-    application_user_id: 'teacher-42',
-    role: 'teacher',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    google_sub: '110248495921238986420'  // Optional: lock to specific Google account
-  })
-});
-
-// 2. Create login link with Google auth
-const response = await fetch('/v3/users/login_link', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-  body: JSON.stringify({
-    application_user_id: 'teacher-42',
-    target: 'teacher_app',
-    auth: 'google',
-    destination: 'awakening_leaderboard',
-    return_url: 'https://your-app.com/callback'
-  })
-});
-
-const { join_url } = await response.json();
-
-// 3. Redirect user — they'll go through Google OAuth, then into Legends
-window.location.href = join_url;
-
-// 4. Handle the callback in your app (see error handling above)
-```
-
-### Important Notes
-
-- **`google_sub` is stable across sessions.** Google's `sub` claim never changes for a given user/application pair. It's safe to store and reuse.
-- **First link is permanent.** Once a Google account is linked to a Legends user, it cannot be changed via the API. If a user needs to switch Google accounts, contact support.
-- **No `google_sub`? No problem.** If you don't provide it, the first Google sign-in links whatever account the user chooses. All subsequent sign-ins enforce that same account.
-- **One Google account per user.** A Google account can only be linked to one Legends user. Attempting to link it to a second user returns `google_link_failed`.
-- **`auth: "google"` is optional.** Without it, login links sign the user in directly (no Google consent screen). Use `auth: "google"` when you need Google identity verification.
-
-## Error Handling
-1. Validate request payload:
-   - Required fields present
-   - `student_ids` is non-empty array
-   - `standard_id` is valid number
-
-2. Common API Errors:
-   - 422: Invalid parameters
-   - 401: Authentication failed
-   - 404: Resource not found
-   - Check response body for detailed error messages
-
-3. Google OAuth Errors (redirect-based):
-   - `google_denied`: User cancelled Google sign-in
-   - `google_identity_mismatch`: Google account doesn't match expected identity
-   - `google_link_failed`: Google account already linked to another user
-   - `google_auth_failed`: Google token verification failed
-
-## Debugging Tips
-1. API Client Logging:
-   - Request URL and payload are logged
-   - Response status and body are logged
-   - JSON parse errors are caught and logged
-
-2. Common Issues:
-   - 404: Check if URL includes `/v3` correctly
-   - 422: Check payload format matches OpenAPI spec
-   - 401: Check token is being sent correctly
-   - `google_identity_mismatch` on every sign-in: Check that the `google_sub` you provided at user creation matches the user's actual Google `sub` claim
-
-## Best Practices
-1. Always check OpenAPI spec for:
-   - Exact endpoint paths
-   - Required fields
-   - Field types and formats
-   - Enum values
-
-2. Use TypeScript interfaces that match API exactly
-3. Validate all inputs before API calls
-4. Handle all error cases explicitly
-5. Log API responses for debugging
-6. When using Google OAuth, always handle redirect errors in your callback URL
-7. Provide `google_sub` at user creation time when you know the user's Google account — this prevents them from accidentally linking the wrong one
+The private Console manages workspaces, applications and access. This public repo demonstrates one application’s API use; it does not create production credentials or replace a partner’s own user/audience authorization.

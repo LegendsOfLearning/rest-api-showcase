@@ -28,6 +28,10 @@ The first-party Legends Partner Portal remains private. Use it to create applica
 - Builds standard, content, fluency, and multi-activity assignments.
 - Generates per-student join links and partner instant-join URLs.
 
+### Maintained partner guide
+
+[Shared API guide](docs/api-documentation.md) covers application credentials, identity guards, fluency assignments, individual Awakening joins and reporting limits. The deployed `/docs` page renders this same file. Start with staging; keep credentials outside agents and repository files. [Open the fluency builder](https://api-showcase.legendsoflearning.com/assignments/build?type=fluency) after signing in to the intended test application.
+
 ### Agent-Friendly Source Map
 
 - `src/app/api/auth/login/route.ts`: OAuth client-credentials login.
