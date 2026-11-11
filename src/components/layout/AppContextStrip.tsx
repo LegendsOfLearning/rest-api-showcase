@@ -58,6 +58,13 @@ export function AppContextStrip() {
       headers: { "x-console-background": "true" },
     })
       .then(async (response) => {
+        if (response.status === 401) {
+          const query = new URLSearchParams({ next: window.location.pathname });
+          const environment = response.headers.get("x-showcase-environment");
+          if (environment === "staging" || environment === "production") query.set("environment", environment);
+          window.location.assign(`/login?${query}`);
+          return null;
+        }
         if (!response.ok) return null;
         return { app: (await response.json()) as ApplicationMeResponse, environment: response.headers.get("x-showcase-environment") };
       })
