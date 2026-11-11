@@ -28,9 +28,9 @@ import {
   StandardsResponse,
 } from "@/types/api";
 import { cookies } from "next/headers";
+import { sessionApiBaseUrl } from "@/lib/server/api-base";
 
 class APIClient {
-  private baseUrl: string;
 
   constructor() {
     // Verify we're server-side
@@ -38,11 +38,7 @@ class APIClient {
       throw new Error("APIClient can only be instantiated server-side");
     }
 
-    this.baseUrl = (process.env.LEGENDS_API_URL || "").replace(/\/$/, "");
 
-    if (!this.baseUrl) {
-      throw new Error("Missing LEGENDS_API_URL environment variable");
-    }
   }
 
   private async getAccessToken(): Promise<string> {
@@ -60,7 +56,8 @@ class APIClient {
     const token = await this.getAccessToken();
 
     // Add /v3 prefix if not present
-    const url = endpoint.startsWith("/v3") ? `${this.baseUrl}${endpoint}` : `${this.baseUrl}/v3${endpoint}`;
+    const baseUrl = await sessionApiBaseUrl();
+    const url = endpoint.startsWith("/v3") ? `${baseUrl}${endpoint}` : `${baseUrl}/v3${endpoint}`;
 
     console.log("[API] Request:", {
       url,

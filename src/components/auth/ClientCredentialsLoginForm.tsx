@@ -2,19 +2,23 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ShowcaseEnvironment } from "@/lib/api/environment";
 
 type ClientCredentialsLoginFormProps = {
   nextPath: string;
+  initialEnvironment: ShowcaseEnvironment;
   initialClientId?: string;
   appName?: string;
 };
 
 export function ClientCredentialsLoginForm({
   nextPath,
+  initialEnvironment,
   initialClientId,
   appName,
 }: ClientCredentialsLoginFormProps) {
   const router = useRouter();
+  const [environment, setEnvironment] = useState<ShowcaseEnvironment>(initialEnvironment);
   const [clientId, setClientId] = useState(initialClientId ?? "");
   const [clientSecret, setClientSecret] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +35,7 @@ export function ClientCredentialsLoginForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          environment,
           client_id: clientId.trim(),
           client_secret: clientSecret,
         }),
@@ -60,7 +65,7 @@ export function ClientCredentialsLoginForm({
           {selectedAppName ? `Connect ${selectedAppName}` : "Connect one test app"}
         </h1>
         <p className="text-sm leading-6 text-muted">
-          Use OAuth client credentials from a Legends app to run the public sample flows locally.
+          Choose the environment that issued your app credentials, then explore the API.
         </p>
         {initialClientId ? (
           <div className="mx-auto mt-3 max-w-full rounded-lg border border-border bg-surface-100 px-3 py-2 text-left">
@@ -77,6 +82,18 @@ export function ClientCredentialsLoginForm({
       ) : null}
 
       <form onSubmit={submitCredentials} className="mt-7 space-y-4">
+        <label className="block space-y-2" htmlFor="environment">
+          <span className="block text-sm font-semibold text-foreground">Environment</span>
+          <select id="environment" name="environment" value={environment}
+            onChange={(event) => { setEnvironment(event.target.value as ShowcaseEnvironment); setError(null); }}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-3 text-sm text-foreground">
+            <option value="staging">Staging / test</option>
+            <option value="production">Production</option>
+          </select>
+          <span className="block text-xs leading-5 text-muted">
+            {environment === "staging" ? "Use your staging credentials and synthetic test identities." : "Use production credentials. API actions affect production data."}
+          </span>
+        </label>
         <label className="block space-y-2" htmlFor="client-id">
           <span className="block text-sm font-semibold text-foreground">Client ID</span>
           <input

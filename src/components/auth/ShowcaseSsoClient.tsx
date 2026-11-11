@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { parseShowcaseEnvironment } from "@/lib/api/environment";
 
 function safeNextPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/partners";
@@ -10,13 +11,20 @@ function safeNextPath(value: string | null): string {
 
 export function ShowcaseSsoClient() {
   const router = useRouter();
+  const handoffRef = useRef<URLSearchParams | null>(null);
   const [message, setMessage] = useState("Opening selected app in the REST API Showcase...");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    // Preserve the original handoff across StrictMode setup/cleanup.
+    const params = handoffRef.current ?? new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    handoffRef.current = params;
     const accessToken = params.get("access_token");
     const nextPath = safeNextPath(params.get("next"));
+    const applicationId = params.get("application_id");
+    let environment;
+    try { environment = params.has("environment") ? parseShowcaseEnvironment(params.get("environment")) : undefined; }
+    catch { window.history.replaceState(null, "", "/sso"); setError("Console provided an unsupported showcase environment."); return; }
 
     window.history.replaceState(null, "", "/sso");
 
@@ -30,7 +38,7 @@ export function ShowcaseSsoClient() {
     fetch("/api/auth/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ access_token: accessToken }),
+      body: JSON.stringify({ access_token: accessToken, environment, ...(applicationId ? { application_id: applicationId } : {}) }),
     })
       .then(async (response) => {
         const payload = (await response.json().catch(() => ({}))) as { message?: string };
@@ -40,6 +48,7 @@ export function ShowcaseSsoClient() {
         }
 
         if (!cancelled) {
+          handoffRef.current = null;
           setMessage("Session ready. Opening showcase...");
           router.replace(nextPath);
           router.refresh();
