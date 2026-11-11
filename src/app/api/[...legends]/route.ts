@@ -19,6 +19,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionApiBaseUrl, sessionEnvironment } from '@/lib/server/api-base';
+import { SHOWCASE_ENVIRONMENT_COOKIE } from '@/lib/api/environment';
 
 const API_VERSION = process.env.LEGENDS_API_VERSION || 'v3';
 
@@ -81,10 +82,13 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
 
     if (response.status === 401) {
       // Token expired or invalid, redirect to login
-      return NextResponse.json(
-        { error: 'Session expired. Please login again.' },
-        { status: 401 }
+      const denied = NextResponse.json(
+        { error: 'Session expired. Please connect again.' },
+        { status: 401, headers: { 'x-showcase-environment': environment } }
       );
+      denied.cookies.delete('auth_token');
+      denied.cookies.delete(SHOWCASE_ENVIRONMENT_COOKIE);
+      return denied;
     }
 
     if (!response.ok) {

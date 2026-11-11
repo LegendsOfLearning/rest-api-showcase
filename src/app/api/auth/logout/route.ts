@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { sessionApiBaseUrl } from '@/lib/server/api-base';
 import { SHOWCASE_ENVIRONMENT_COOKIE } from '@/lib/api/environment';
 
 function clearAuthCookies(response: NextResponse) {
@@ -15,27 +13,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
-
-  // Best-effort revoke on server; ignore errors
-  if (token) {
-    try {
-      await fetch(`${await sessionApiBaseUrl()}/v3/oauth2/revoke`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-        // RFC 7009 token revocation - token is sufficient for confidential clients on our server
-        body: new URLSearchParams({ token }).toString(),
-        redirect: 'error',
-      });
-    } catch {
-      // swallow – logout continues
-    }
-  }
-
+  // Client-credentials grants can reuse an application's active token. This
+  // browser does not own it; revoking it would disconnect other integrations.
   const response = NextResponse.json({ success: true });
   clearAuthCookies(response);
   return response;

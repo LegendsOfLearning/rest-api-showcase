@@ -15,7 +15,7 @@ function load(file, imports = {}, globals = {}) {
 const environment = load('src/lib/api/environment.ts');
 const bases = { defaultShowcaseEnvironment: () => 'production', legendsApiBaseUrl: (env) => environment.showcaseApiBases[environment.parseShowcaseEnvironment(env)] };
 function responseMock() {
-  return { NextResponse: { json(body, options = {}) { return { body, status: options.status ?? 200, cookies: { values: {}, set(name, value, flags) { this.values[name] = { value, flags }; } } }; } } };
+  return { NextResponse: { json(body, options = {}) { return { body, status: options.status ?? 200, cookies: { values: {}, deleted: [], set(name, value, flags) { this.values[name] = { value, flags }; }, delete(name) { this.deleted.push(name); } } }; } } };
 }
 function route(file, fetch) {
   return load(file, { 'next/server': responseMock(), '@/lib/server/api-base': bases, '@/lib/api/environment': environment }, { fetch });
@@ -80,4 +80,13 @@ test('session upstream preserves legacy configuration and rejects invalid explic
   assert.equal(await api.sessionApiBaseUrl(), 'https://api.smartlittlecookies.com/api');
   cookie = { value: 'https://example.com' };
   await assert.rejects(() => api.sessionApiBaseUrl());
+});
+
+test('browser logout clears cookies without revoking a potentially shared token', async () => {
+  let calls = 0;
+  const api = route('src/app/api/auth/logout/route.ts', async () => { calls++; });
+  const response = await api.POST();
+  assert.equal(response.status, 200);
+  assert.deepEqual(Array.from(response.cookies.deleted), ['auth_token', 'showcase_environment']);
+  assert.equal(calls, 0);
 });
