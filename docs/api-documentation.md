@@ -99,7 +99,7 @@ Business routes enforce the calling application's configured scopes. For the sam
 
 ## Fluency assignments
 
-Fluency is a shared Partner API capability. Create an `awakening_fluency` activity through `/assignments`, launch learners through `/assignments/{id}/joins`, and read the existing assignment/player reports. No XtraMath-specific app, Insights workflow or separate fluency authentication is required.
+Fluency is a shared Partner API capability. Create an `awakening_fluency` activity through `/assignments`, launch learners through `/assignments/{id}/joins`, and read the existing assignment/player reports. Use the same application credentials and learner identities as other assignment activities.
 
 [Staging Showcase fluency builder](https://api-showcase.legendsoflearning.com/assignments/build?type=fluency) · [Authentication and permissions](https://console.legendsoflearning.com/docs/partner-rest-api) · [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp)
 

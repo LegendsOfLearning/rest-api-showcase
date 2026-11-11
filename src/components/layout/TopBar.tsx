@@ -24,8 +24,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-border px-6 py-4 flex flex-wrap items-center justify-between gap-y-2">
+        <div className={`flex items-center gap-3 flex-1 min-w-0 ${isPublicGuide ? "basis-full sm:basis-auto" : ""}`}>
           {onMenuClick && (
             <button
               type="button"
@@ -42,7 +42,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             <h1 className="truncate text-xl font-semibold text-foreground">{title}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -73,7 +73,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
           )}
         </div>
       </header>
-      <div className="sticky top-[73px] z-10 bg-surface/80 backdrop-blur border-b border-border px-6 py-2 lg:px-6">
+      <div className={`${isPublicGuide ? "sm:sticky sm:top-[73px]" : "sticky top-[73px]"} z-10 bg-surface/80 backdrop-blur border-b border-border px-6 py-2 lg:px-6`}>
         <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <Breadcrumbs />
           <AppContextStrip />
