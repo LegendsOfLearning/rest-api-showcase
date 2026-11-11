@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { API_ENDPOINTS } from '@/lib/api/endpoints';
+import { sessionApiBaseUrl } from '@/lib/server/api-base';
+import { SHOWCASE_ENVIRONMENT_COOKIE } from '@/lib/api/environment';
 
 function clearAuthCookies(response: NextResponse) {
   response.cookies.delete('auth_token');
+  response.cookies.delete(SHOWCASE_ENVIRONMENT_COOKIE);
 }
 
 export async function GET(request: Request) {
@@ -19,7 +21,7 @@ export async function POST() {
   // Best-effort revoke on server; ignore errors
   if (token) {
     try {
-      await fetch(API_ENDPOINTS.TOKEN_REVOKE, {
+      await fetch(`${await sessionApiBaseUrl()}/v3/oauth2/revoke`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -27,6 +29,7 @@ export async function POST() {
         },
         // RFC 7009 token revocation - token is sufficient for confidential clients on our server
         body: new URLSearchParams({ token }).toString(),
+        redirect: 'error',
       });
     } catch {
       // swallow – logout continues

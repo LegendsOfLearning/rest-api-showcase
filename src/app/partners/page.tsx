@@ -12,19 +12,19 @@ import {
 } from "@/lib/partners/launchReadiness";
 import type { ApplicationMeResponse } from "@/types/api";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.legendsoflearning.com";
+
 
 type ProbeErrorResponse = {
   error?: string;
   message?: string;
 };
 
-async function loadCurrentApplication(): Promise<ApplicationMeResponse> {
+async function loadCurrentApplication(): Promise<{ application: ApplicationMeResponse; environment: string | null }> {
   const response = await fetch(API_ENDPOINTS.APPLICATION_ME);
 
   if (!response.ok) throw new Error("Failed to load application");
 
-  return response.json();
+  return { application: await response.json(), environment: response.headers.get("x-showcase-environment") };
 }
 
 function joinPatterns(applicationSlug: string) {
@@ -49,6 +49,7 @@ function joinPatterns(applicationSlug: string) {
 
 export default function PartnersPage() {
   const [app, setApp] = useState<ApplicationMeResponse | null>(null);
+  const [environment, setEnvironment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [docsProbe, setDocsProbe] = useState<VerificationProbeState>({ kind: "idle" });
@@ -59,8 +60,8 @@ export default function PartnersPage() {
   useEffect(() => {
     let cancelled = false;
     loadCurrentApplication()
-      .then((data: ApplicationMeResponse) => {
-        if (!cancelled) setApp(data);
+      .then((data) => {
+        if (!cancelled) { setApp(data.application); setEnvironment(data.environment); }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load application");
@@ -87,7 +88,8 @@ export default function PartnersPage() {
     let url = pattern;
     if (contentId) url = url.replace("{content_id}", contentId);
     if (standardId) url = url.replace("{standard_id}", standardId);
-    return BASE_URL + url;
+    const baseUrl = environment === "staging" ? "https://api.smartlittlecookies.com" : "https://api.legendsoflearning.com";
+    return baseUrl + url;
   };
 
   const isJoinReady = (pattern: string) => {

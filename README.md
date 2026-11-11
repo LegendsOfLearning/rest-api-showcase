@@ -70,7 +70,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_LEGENDS_OPENAPI_SPEC_URL=https://api.legendsoflearning.com/api/v3/docs/openapi
 ```
 
-The OpenAPI URL is optional and defaults to the production spec above. The app asks for the OAuth client ID and client secret on the local login page. Do not commit credentials or `.env` files.
+The OpenAPI URL is optional and defaults to the production spec above. The login page asks you to choose staging/test or production before entering the OAuth client ID and client secret. The authenticated session keeps API calls, SSO validation and logout on that selected environment; it never retries credentials against the other host. Existing sessions without an environment cookie retain their original configured upstream.
+
+The app asks for the OAuth client ID and client secret on the local login page. Do not commit credentials or `.env` files.
 
 ### Run
 

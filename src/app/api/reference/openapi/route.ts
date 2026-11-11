@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { LEGENDS_OPENAPI_SPEC_URL } from "@/lib/api/reference";
+import { sessionApiBaseUrl } from "@/lib/server/api-base";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +7,8 @@ export async function GET() {
   const startedAt = Date.now();
 
   try {
-    const response = await fetch(LEGENDS_OPENAPI_SPEC_URL, {
+    const specUrl = `${await sessionApiBaseUrl()}/v3/docs/openapi`;
+    const response = await fetch(specUrl, {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
@@ -19,7 +20,7 @@ export async function GET() {
       return NextResponse.json(
         {
           ok: false,
-          url: LEGENDS_OPENAPI_SPEC_URL,
+          url: specUrl,
           statusCode: response.status,
           contentType,
           latencyMs: Date.now() - startedAt,
@@ -30,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      url: LEGENDS_OPENAPI_SPEC_URL,
+      url: specUrl,
       statusCode: response.status,
       contentType,
       bytes: bodyBytes,
@@ -40,7 +41,6 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        url: LEGENDS_OPENAPI_SPEC_URL,
         message: error instanceof Error ? error.message : "OpenAPI reference check failed.",
         latencyMs: Date.now() - startedAt,
       },

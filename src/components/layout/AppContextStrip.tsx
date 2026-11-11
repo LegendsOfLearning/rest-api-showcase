@@ -8,7 +8,7 @@ import type { ApplicationMeResponse } from "@/types/api";
 
 type LoadState =
   | { kind: "idle" | "loading" }
-  | { kind: "ready"; app: ApplicationMeResponse }
+  | { kind: "ready"; app: ApplicationMeResponse; environment: string | null }
   | { kind: "unavailable" };
 
 const APP_SCOPED_PREFIXES = [
@@ -59,11 +59,11 @@ export function AppContextStrip() {
     })
       .then(async (response) => {
         if (!response.ok) return null;
-        return (await response.json()) as ApplicationMeResponse;
+        return { app: (await response.json()) as ApplicationMeResponse, environment: response.headers.get("x-showcase-environment") };
       })
-      .then((app) => {
+      .then((result) => {
         if (cancelled) return;
-        setState(app ? { kind: "ready", app } : { kind: "unavailable" });
+        setState(result ? { kind: "ready", ...result } : { kind: "unavailable" });
       })
       .catch(() => {
         if (!cancelled) setState({ kind: "unavailable" });
@@ -93,6 +93,7 @@ export function AppContextStrip() {
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+      {state.environment && <span className="rounded-full border border-border bg-surface px-3 py-1.5 font-semibold">{state.environment === "staging" ? "Staging / test" : "Production"}</span>}
       <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden="true" />
         <span className="truncate font-semibold text-foreground">{app.name}</span>

@@ -4,6 +4,7 @@
  */
 
 import { cookies } from 'next/headers';
+import { sessionApiBaseUrl } from '@/lib/server/api-base';
 
 async function getAuthToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -20,7 +21,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   // Build the API URL - endpoint should be like '/searches' or '/content/123'
   // The proxy route expects paths without /api prefix, and adds /v3 automatically
-  const baseUrl = process.env.LEGENDS_API_URL || 'https://api.legendsoflearning.com/api';
+  const baseUrl = await sessionApiBaseUrl();
   const url = `${baseUrl}/v3${endpoint}`;
   
   const response = await fetch(url, {
@@ -45,7 +46,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
 export async function ensureUser(applicationUserId: string, role: 'teacher' | 'student') {
   try {
-    const response = await fetch(`${process.env.LEGENDS_API_URL || 'https://api.legendsoflearning.com/api'}/v3/users`, {
+    const response = await fetch(`${await sessionApiBaseUrl()}/v3/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

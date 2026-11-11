@@ -18,7 +18,7 @@
 
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { legendsApiBaseUrl } from '@/lib/server/api-base';
+import { sessionApiBaseUrl, sessionEnvironment } from '@/lib/server/api-base';
 
 const API_VERSION = process.env.LEGENDS_API_VERSION || 'v3';
 
@@ -33,7 +33,8 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
     const apiPath = pathname.startsWith('v3/')
       ? `/${pathname}${search}`
       : `/${API_VERSION}/${pathname}${search}`;
-    const baseUrl = legendsApiBaseUrl();
+    const baseUrl = await sessionApiBaseUrl();
+    const environment = await sessionEnvironment();
     const url = `${baseUrl}${apiPath}`;
     
     console.log('[API] Proxying request:', {
@@ -75,6 +76,7 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
       method,
       headers: outgoingHeaders,
       body,
+      redirect: 'error',
     });
 
     if (response.status === 401) {
@@ -212,11 +214,11 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
 
     const contentType = response.headers.get('content-type') || '';
     if (response.status === 204) {
-      return NextResponse.json({}, { status: 204 });
+      return new NextResponse(null, { status: 204 });
     }
     if (contentType.includes('application/json')) {
       const data = await response.json();
-      return NextResponse.json(data, { status: response.status });
+      return NextResponse.json(data, { status: response.status, headers: { 'x-showcase-environment': environment } });
     }
     const text = await response.text();
     return new NextResponse(text, {
