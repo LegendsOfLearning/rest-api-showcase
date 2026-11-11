@@ -1131,6 +1131,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                 <button
                   key={type.value}
                   type="button"
+                  aria-pressed={assignmentType === type.value}
                   onClick={() => {
                     setAssignmentType(type.value);
                     setError(null);
