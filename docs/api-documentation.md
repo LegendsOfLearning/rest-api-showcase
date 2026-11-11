@@ -80,7 +80,7 @@ For fluency, returned `fluency_facts` are the configured exercise pool, not meas
 ## Application permissions
 
 
-Business routes enforce the calling application's configured scopes. For the same resource, `access` implies `write`, which implies `read`. For example, `assignments:write` includes `assignments:read`. Requesting a narrower token scope does not create a read-only guarantee when the application still has broader configured grants; use a separately restricted application for that boundary.
+Business routes enforce the calling application's configured scopes. For resources in the configured scope hierarchy, including `users` and `assignments`, `access` implies `write`, which implies `read`. For example, `assignments:write` includes `assignments:read`. `content_reviews` and `searches` require their explicit grants; do not infer unsupported write/read scope variants. Requesting a narrower token scope does not create a read-only guarantee when the application still has broader configured grants; use a separately restricted application for that boundary.
 
 | Operations | Required application scope |
 | --- | --- |
@@ -107,7 +107,7 @@ Download [the Python API client](https://console.legendsoflearning.com/docs/exam
 
 ### Before you start
 
-Use the designated staging application and synthetic teacher/student identities. Check `/applications/me`; ensure effective user, standard, assignment and join scopes. Application `write` implies `read` for the same resource. A narrower requested token scope is not a substitute for configuring a restricted application's grants.
+Use the designated staging application and synthetic teacher/student identities. Check `/applications/me`; ensure effective user, standard, assignment and join scopes. The configured hierarchy grants `users:write` → `users:read` and `assignments:write` → `assignments:read`; other operations still require their documented explicit grants. A narrower requested token scope is not a substitute for configuring a restricted application's grants.
 
 All paths below are relative to `https://api.smartlittlecookies.com/api/v3`. Discover a real numeric `standard_id` through `/standard_sets/{set_id}/standards`; the numeric ID in the JSON below is illustrative. Register the creator and learner through `/users` with stable external IDs; include nonempty teacher names. Existing-account sign-in restrictions still apply.
 
