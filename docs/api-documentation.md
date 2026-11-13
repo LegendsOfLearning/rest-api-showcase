@@ -186,3 +186,7 @@ Read this maintained guide and the environment’s live OpenAPI before copying c
 - `src/app/api/auth/logout/route.ts`: local cookie cleanup without revoking shared application tokens.
 
 The private Console manages workspaces, applications and access. This public repo demonstrates one application’s API use; it does not create production credentials or replace a partner’s own user/audience authorization.
+
+## Fluency pool selectors
+
+Fluency activities accept one of `fluency_facts`, `fluency_fact_families` (`{op,a,b}` seeds), or `fluency_fact_ranges` (`{op,min,max}`). Families include Basecamp inverse relationships; ranges generate the named operator with inclusive bounds for both operands (add 0–10, mul 0–12). Dry-run returns the expanded fixed pool in `activities[].fluency_facts`; create and reporting use the same pool. REST and MCP use identical validation. These selectors do not enable adaptive progression. See the [fluency guide](https://console.legendsoflearning.com/docs/fluency-assignments) for examples and limits.
