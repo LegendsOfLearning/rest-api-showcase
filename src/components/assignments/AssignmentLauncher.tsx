@@ -1344,7 +1344,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                     </select>
                   </label>
                   <p className="text-xs text-muted">
-                    {fluencyInputMode === "families" ? "Each seed includes its Basecamp family and inverse operations. Preview to check supported families." : fluencyInputMode === "ranges" ? "Both operands use the inclusive range. Only the selected operator is included." : "Practice uses exactly the fact pool you supply."}
+                    {fluencyInputMode === "families" ? "Each seed includes its Basecamp family and inverse operations. Preview to check supported families." : fluencyInputMode === "ranges" ? "Both operands use the inclusive range. Addition supports 0–10; multiplication supports 0–12. Only the selected operator is included." : "Practice uses exactly the fact pool you supply."}
                   </p>
                   {fluencyInputMode === "ranges" && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1357,7 +1357,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground">
-                        Fact Builder
+                        {fluencyInputMode === "families" ? "Family seeds" : "Fact Builder"}
                       </label>
                       <p className="text-xs text-muted mt-1">
                         Practice questions are sampled from this fact pool.
@@ -1368,7 +1368,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                       onClick={addStandaloneFluencyFact}
                       className="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors"
                     >
-                      Add Fact
+                      {fluencyInputMode === "families" ? "Add family" : "Add Fact"}
                     </button>
                   </div>
 
@@ -1408,7 +1408,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <div className="text-xs uppercase tracking-[0.24em] text-muted font-semibold">
-                                Fact {index + 1}
+                                {fluencyInputMode === "families" ? "Seed" : "Fact"} {index + 1}
                               </div>
                               <div className="text-sm text-foreground mt-1">
                                 {fact.a || "?"}{" "}
