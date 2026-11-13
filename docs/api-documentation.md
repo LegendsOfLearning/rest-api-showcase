@@ -147,6 +147,8 @@ Send `POST /assignments/{assignment_id}/joins`:
 
 Resolve the learner and their authorized audience on your backend. Return the generated `join_url` only to that learner and open it exactly as returned. Keep it out of prompts, logs, screenshots and shared resources. Assignment joins currently expire after 24 hours; generate them on demand.
 
+A new learner's first launch includes Awakening onboarding. Reuse a prepared synthetic learner for a short practice demo.
+
 The Showcase's fluency builder supports an explicit fact pool and selects Awakening. Use the API walkthrough to exercise omitted-facts fallback; the builder does not claim to configure the persisted daily practice mix.
 
 ### 3. Read assignment and learner results
