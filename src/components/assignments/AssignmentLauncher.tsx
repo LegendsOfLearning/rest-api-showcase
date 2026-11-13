@@ -1370,7 +1370,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                             )}
                           </div>
 
-                          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:gap-3">
                             <input
                               aria-label={`Fact ${index + 1} first operand`}
                               type="number"
@@ -1382,7 +1382,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                 })
                               }
                               placeholder="First number"
-                              className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+                              className="min-w-0 w-full rounded-xl border border-border bg-background px-2 py-3 text-sm text-foreground sm:px-4"
                             />
                             <select
                               aria-label={`Fact ${index + 1} operator`}
@@ -1392,7 +1392,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                   op: event.target.value as FluencyOperator,
                                 })
                               }
-                              className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground min-w-[84px]"
+                              className="rounded-xl border border-border bg-background px-2 py-3 text-sm text-foreground min-w-[56px] sm:min-w-[84px] sm:px-4"
                             >
                               {FLUENCY_OPERATORS.map((operator) => (
                                 <option
@@ -1414,7 +1414,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                 })
                               }
                               placeholder="Second number"
-                              className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+                              className="min-w-0 w-full rounded-xl border border-border bg-background px-2 py-3 text-sm text-foreground sm:px-4"
                             />
                           </div>
 
