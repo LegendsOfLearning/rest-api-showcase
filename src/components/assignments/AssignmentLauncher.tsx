@@ -1109,9 +1109,9 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
         </h2>
 
         {/* Content and Audience Side by Side */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Content Selection - Left Column */}
-          <div className="rounded-xl border border-border bg-surface-100 p-6 space-y-6">
+          <div className="min-w-0 rounded-xl border border-border bg-surface-100 p-6 space-y-6">
             <div>
               <h3 className="text-base font-semibold text-foreground mb-1">
                 Select Content
@@ -1914,7 +1914,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
           </div>
 
           {/* Audience Selection - Right Column */}
-          <div className="rounded-xl border border-border bg-surface-100 p-6 space-y-6">
+          <div className="min-w-0 rounded-xl border border-border bg-surface-100 p-6 space-y-6">
             <div>
               <h3 className="text-base font-semibold text-foreground mb-1">
                 Select Audience
