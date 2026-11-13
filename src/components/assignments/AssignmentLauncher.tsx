@@ -261,7 +261,6 @@ function isActivityValid(activity: Activity): boolean {
   if (activity.mode === "fluency") {
     const fluencyFacts = normalizeFluencyFacts(activity.fluency_facts);
     return (
-      typeof activity.standard_id === "number" &&
       !!fluencyFacts &&
       fluencyFacts.length > 0
     );
@@ -394,6 +393,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
 
   useEffect(() => {
     async function fetchStandardSets() {
+      if (assignmentType === "fluency") return;
       try {
         let page = 1;
         const pageSize = 100;
@@ -431,7 +431,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
       }
     }
     fetchStandardSets();
-  }, []);
+  }, [assignmentType]);
 
   useEffect(() => {
     async function fetchStandards() {
@@ -730,14 +730,13 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
     const normalizedFacts = normalizeFluencyFacts(fluencyFacts);
 
     if (
-      !selectedStandard ||
       !selectedTeacher ||
       selectedStudents.length === 0 ||
       !normalizedFacts ||
       normalizedFacts.length === 0
     ) {
       setError(
-        "Please choose a teacher, a standard, at least one student, and a complete fluency fact set.",
+        "Please choose a teacher, at least one student, and a complete fluency fact set.",
       );
       return;
     }
@@ -760,7 +759,6 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
           activities: [
             {
               type: "awakening_fluency",
-              standard_id: selectedStandard.id,
               fluency_facts: normalizedFacts,
             },
           ],
@@ -989,7 +987,6 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
         if (activity.mode === "fluency") {
           return {
             type: "awakening_fluency",
-            standard_id: activity.standard_id!,
             fluency_facts: normalizeFluencyFacts(activity.fluency_facts)!,
           };
         }
@@ -1081,7 +1078,6 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
       return selectedContent && selectedStudents.length > 0 && selectedTeacher;
     } else if (assignmentType === "fluency") {
       return (
-        selectedStandard &&
         selectedStudents.length > 0 &&
         selectedTeacher &&
         !!normalizeFluencyFacts(fluencyFacts)
@@ -1282,8 +1278,8 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                         Build a practice fact pool
                       </h4>
                       <p className="text-sm text-muted mt-2 max-w-xl">
-                        Choose a standard, configure the Math Basecamp fact
-                        pool, and launch directly into Awakening.
+                        Configure a practice fact pool and launch directly into
+                        Awakening.
                       </p>
                     </div>
                     <div className="hidden items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-2 text-xs text-foreground/80 md:flex">
@@ -1292,66 +1288,6 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                       <span>Instant launch</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Standard Set
-                    </label>
-                    <select
-                      value={selectedSet || ""}
-                      onChange={(e) => {
-                        setSelectedSet(e.target.value);
-                        setSelectedStandard(null);
-                      }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-                    >
-                      <option value="">Select a Standard Set</option>
-                      {standardSets.map((set) => (
-                        <option key={set.id} value={set.id}>
-                          {set.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {selectedSet && (
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Standard
-                      </label>
-                      <div className="max-h-[220px] overflow-y-auto rounded-xl border border-border bg-surface divide-y divide-border/60">
-                        {standards.length === 0 ? (
-                          <div className="text-sm text-muted py-4 text-center">
-                            No standards available
-                          </div>
-                        ) : (
-                          standards.map((standard) => (
-                            <button
-                              key={standard.id}
-                              type="button"
-                              onClick={() => setSelectedStandard(standard)}
-                              className={`w-full px-4 py-3 text-left transition-colors ${
-                                selectedStandard?.id === standard.id
-                                  ? "bg-accent/10"
-                                  : "hover:bg-surface-100"
-                              }`}
-                            >
-                              <div
-                                className={`text-sm font-medium ${selectedStandard?.id === standard.id ? "text-accent" : "text-foreground"}`}
-                              >
-                                {standard.standard}
-                              </div>
-                              <div className="text-xs text-muted mt-1">
-                                {standard.standard_code}
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -1434,7 +1370,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                             )}
                           </div>
 
-                          <div className="grid grid-cols-[1fr_auto_1fr] gap-3">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3">
                             <input
                               aria-label={`Fact ${index + 1} first operand`}
                               type="number"
@@ -1446,7 +1382,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                 })
                               }
                               placeholder="First number"
-                              className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+                              className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
                             />
                             <select
                               aria-label={`Fact ${index + 1} operator`}
@@ -1478,7 +1414,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                 })
                               }
                               placeholder="Second number"
-                              className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
+                              className="min-w-0 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground"
                             />
                           </div>
 
@@ -1681,8 +1617,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                           </label>
                           {activity.mode === "fluency" ? (
                             <div className="rounded-lg border border-border bg-surface-100 px-4 py-3 text-sm text-muted">
-                              Fluency activities do not take content. Choose a
-                              standard and enter facts below.
+                              Enter practice facts below.
                             </div>
                           ) : activity.content ? (
                             <div className="rounded-lg border-2 border-accent bg-accent/5 p-3">
@@ -1751,12 +1686,9 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                         </div>
 
                         {/* Standard Selection */}
-                        <div>
+                        {activity.mode !== "fluency" && <div>
                           <label className="block text-xs font-medium text-foreground mb-1.5">
-                            Standard{" "}
-                            {activity.mode === "fluency"
-                              ? "(required)"
-                              : "(optional)"}
+                            Standard (optional)
                           </label>
                           {activity.standard ? (
                             <div className="rounded-lg border-2 border-accent bg-accent/5 p-3">
@@ -1821,7 +1753,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                               </div>
                             </button>
                           )}
-                        </div>
+                        </div>}
                       </div>
 
                       {activity.mode === "fluency" && (
@@ -1879,7 +1811,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                       </button>
                                     )}
                                   </div>
-                                  <div className="grid grid-cols-[1fr_auto_1fr] gap-2">
+                                  <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
                                     <input
                                       aria-label={`Activity ${index + 1} fact ${factIndex + 1} first operand`}
                                       type="number"
@@ -1893,7 +1825,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                         )
                                       }
                                       placeholder="A"
-                                      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                      className="min-w-0 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
                                     />
                                     <select
                                       aria-label={`Activity ${index + 1} fact ${factIndex + 1} operator`}
@@ -1908,7 +1840,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                           },
                                         )
                                       }
-                                      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                      className="min-w-0 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
                                     >
                                       {FLUENCY_OPERATORS.map((operator) => (
                                         <option
@@ -1932,7 +1864,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                                         )
                                       }
                                       placeholder="B"
-                                      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                      className="min-w-0 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
                                     />
                                   </div>
                                   {hasExactDivisionIssue && (
@@ -1957,10 +1889,9 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                             activity
                           </div>
                         )}
-                      {activity.mode === "fluency" && !activity.standard && (
+                      {activity.mode === "fluency" && !isActivityValid(activity) && (
                         <div className="text-xs text-muted bg-surface-100 rounded px-2 py-1.5">
-                          💡 Fluency activities need a standard and at least one
-                          complete fact
+                          Add at least one complete practice fact
                         </div>
                       )}
                     </div>

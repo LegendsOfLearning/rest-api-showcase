@@ -30,7 +30,7 @@ Choose an activity supported by the contract:
 | Activity | Request entry |
 | --- | --- |
 | Content | `content_id` and its applicable `standard_id` |
-| Fluency | `type: "awakening_fluency"`, `standard_id`, optional `fluency_facts` |
+| Fluency | `type: "awakening_fluency"`, `fluency_facts`; no `standard_id` needed |
 | Other Awakening activities | Explicit mastery, focus or timed type; timed also needs `play_duration_seconds` |
 
 Discover current IDs with `/standard_sets`, `/standard_sets/{id}/standards`, `/content` or `/searches`. Standard-set IDs are strings and must be URL-encoded; standards/content IDs are numeric. For search, use `hits[].content.id` or `hits[].standard.id`; the outer `hits[].id` is a fresh display UUID. Collection envelopes/pagination differ: standard sets use `results`, standards/content use `entries`; content uses `per_page`, standards use `page_size`.
@@ -107,9 +107,9 @@ Download [the Python API client](https://console.legendsoflearning.com/docs/exam
 
 ### Before you start
 
-Use the designated staging application and synthetic teacher/student identities. Check `/applications/me`; ensure effective user, standard, assignment and join scopes. The configured hierarchy grants `users:write` → `users:read` and `assignments:write` → `assignments:read`; other operations still require their documented explicit grants. A narrower requested token scope is not a substitute for configuring a restricted application's grants.
+Use the designated staging application and synthetic teacher/student identities. Check `/applications/me`; ensure effective user, assignment and join scopes. The configured hierarchy grants `users:write` → `users:read` and `assignments:write` → `assignments:read`; other operations still require their documented explicit grants. A narrower requested token scope is not a substitute for configuring a restricted application's grants.
 
-All paths below are relative to `https://api.smartlittlecookies.com/api/v3`. Discover a real numeric `standard_id` through `/standard_sets/{set_id}/standards`; the numeric ID in the JSON below is illustrative. Register the creator and learner through `/users` with stable external IDs; include nonempty teacher names. Existing-account sign-in restrictions still apply.
+All paths below are relative to `https://api.smartlittlecookies.com/api/v3`. Fluency takes facts directly; no standards lookup or `standard_id` is needed. Register the creator and learner through `/users` with stable external IDs; include nonempty teacher names. Existing-account sign-in restrictions still apply.
 
 ### 1. Create a fluency assignment
 
@@ -121,7 +121,6 @@ Send `POST /assignments` with an idempotency key for this logical assignment:
   "name": "Arithmetic practice",
   "activities": [{
     "type": "awakening_fluency",
-    "standard_id": 1234,
     "fluency_facts": [
       {"a": 3, "b": 4, "op": "add"},
       {"a": 14, "b": 6, "op": "sub"},
@@ -132,7 +131,7 @@ Send `POST /assignments` with an idempotency key for this logical assignment:
 }
 ```
 
-The response contains `assignment_id`. Operands must be integers; operations are `add`, `sub`, `mul`, `div`. Division requires a nonzero divisor and an integer quotient. Invalid facts return 422.
+The response contains `assignment_id`. The server associates a curated fluency learning objective internally for launch and reporting; this does not change your fact pool. Existing explicit `standard_id` requests remain supported. The type alias `fluency` and the `facts` field alias are also accepted. Operands must be integers; operations are `add`, `sub`, `mul`, `div`. Division requires a nonzero divisor and an integer quotient. Invalid facts return 422.
 
 A nonempty explicit `fluency_facts` list takes precedence over the learner's current focus. The list is an exercise pool: the runtime samples facts and does not promise every configured fact is attempted. If facts are omitted or empty, fluency falls back to the persisted Math Basecamp daily-target/practice mix; an empty list does not request zero practice. That fallback depends on learner state. The compatibility `facts` alias exists, but use `fluency_facts` for new clients.
 
