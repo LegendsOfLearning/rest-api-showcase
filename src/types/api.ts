@@ -199,6 +199,8 @@ export interface AssignmentActivityCreateRequest {
   content_id?: number;
   standard_id?: number;
   fluency_facts?: FluencyFact[];
+  fluency_fact_families?: FluencyFact[];
+  fluency_fact_ranges?: { op: "add" | "mul"; min: number; max: number }[];
 }
 
 export interface AssignmentCreateResponse {

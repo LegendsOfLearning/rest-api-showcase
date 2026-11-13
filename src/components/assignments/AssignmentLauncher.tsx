@@ -323,6 +323,13 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
     createEmptyFact(),
   ]);
 
+  const [fluencyInputMode, setFluencyInputMode] = useState<"facts" | "families" | "ranges">("facts");
+  const [rangeOp, setRangeOp] = useState<"add" | "mul">("mul");
+  const [rangeMin, setRangeMin] = useState("0");
+  const [rangeMax, setRangeMax] = useState("12");
+  const [poolPreview, setPoolPreview] = useState<{ key: string; facts: FluencyFact[] } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // Multi-activity builder state
   const [activities, setActivities] = useState<Activity[]>([
     createEmptyActivity(),
@@ -726,14 +733,53 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
     );
   };
 
+  const standaloneFluencyActivity = (): AssignmentActivityCreateRequest | null => {
+    if (fluencyInputMode === "ranges") {
+      const min = parsePositiveInteger(rangeMin);
+      const max = parsePositiveInteger(rangeMax);
+      if (min === null || max === null || min > max || max > (rangeOp === "add" ? 10 : 12)) return null;
+      return { type: "awakening_fluency", fluency_fact_ranges: [{ op: rangeOp, min, max }] };
+    }
+    const facts = normalizeFluencyFacts(fluencyFacts);
+    if (!facts?.length) return null;
+    return fluencyInputMode === "families"
+      ? { type: "awakening_fluency", fluency_fact_families: facts }
+      : { type: "awakening_fluency", fluency_facts: facts };
+  };
+
+  const previewFluencyPool = async (activity: AssignmentActivityCreateRequest) => {
+    const response = await fetch(API_ENDPOINTS.ASSIGNMENTS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ application_user_id: selectedTeacher?.application_user_id, dry_run: true, activities: [activity] }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const details = Object.values(data.errors ?? {}).map(String).join("; ");
+      throw new Error(details || data.message || "Could not preview the fact pool.");
+    }
+    const facts = data.activities?.[0]?.fluency_facts;
+    if (!Array.isArray(facts) || facts.length === 0) throw new Error("The preview returned no practice facts.");
+    setPoolPreview({ key: JSON.stringify(activity), facts });
+  };
+
+  const handlePoolPreview = async () => {
+    const activity = standaloneFluencyActivity();
+    if (!activity || !selectedTeacher) return;
+    setPreviewLoading(true);
+    setError(null);
+    try { await previewFluencyPool(activity); }
+    catch (err) { setError(err instanceof Error ? err.message : "Preview failed"); }
+    finally { setPreviewLoading(false); }
+  };
+
   const handleFluencyLaunch = async () => {
-    const normalizedFacts = normalizeFluencyFacts(fluencyFacts);
+    const activity = standaloneFluencyActivity();
 
     if (
       !selectedTeacher ||
       selectedStudents.length === 0 ||
-      !normalizedFacts ||
-      normalizedFacts.length === 0
+      !activity
     ) {
       setError(
         "Please choose a teacher, at least one student, and a complete fluency fact set.",
@@ -749,6 +795,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
     setJoinUrls([]);
 
     try {
+      await previewFluencyPool(activity);
       const response = await fetch(API_ENDPOINTS.ASSIGNMENTS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -756,12 +803,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
           application_user_id: selectedTeacher.application_user_id,
           name: "Fluency Session",
           ...assignmentSchedule,
-          activities: [
-            {
-              type: "awakening_fluency",
-              fluency_facts: normalizedFacts,
-            },
-          ],
+          activities: [activity],
         }),
       });
 
@@ -1080,7 +1122,7 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
       return (
         selectedStudents.length > 0 &&
         selectedTeacher &&
-        !!normalizeFluencyFacts(fluencyFacts)
+        !!standaloneFluencyActivity()
       );
     } else if (assignmentType === "multi-activity") {
       const hasInvalidActivities = activities.some(
@@ -1291,6 +1333,27 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                 </div>
 
                 <div className="space-y-3">
+                  <label className="block text-sm font-medium text-foreground">
+                    Fact selection
+                    <select aria-label="Fact selection" value={fluencyInputMode}
+                      onChange={(event) => setFluencyInputMode(event.target.value as typeof fluencyInputMode)}
+                      className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-3">
+                      <option value="facts">Exact facts</option>
+                      <option value="families">Fact families</option>
+                      <option value="ranges">Operator range</option>
+                    </select>
+                  </label>
+                  <p className="text-xs text-muted">
+                    {fluencyInputMode === "families" ? "Each seed includes its Basecamp family and inverse operations. Preview to check supported families." : fluencyInputMode === "ranges" ? "Both operands use the inclusive range. Only the selected operator is included." : "Practice uses exactly the fact pool you supply."}
+                  </p>
+                  {fluencyInputMode === "ranges" && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <label className="text-sm">Operator<select aria-label="Range operator" value={rangeOp} onChange={(event) => { const op = event.target.value as "add" | "mul"; setRangeOp(op); setRangeMax(op === "add" ? "10" : "12"); }} className="mt-1 w-full rounded-xl border border-border bg-background p-3"><option value="add">Addition (+)</option><option value="mul">Multiplication (×)</option></select></label>
+                      <label className="text-sm">Minimum<input aria-label="Range minimum" type="number" min={0} max={rangeOp === "add" ? 10 : 12} value={rangeMin} onChange={(event) => setRangeMin(event.target.value)} className="mt-1 w-full min-w-0 rounded-xl border border-border bg-background p-3" /></label>
+                      <label className="text-sm">Maximum<input aria-label="Range maximum" type="number" min={0} max={rangeOp === "add" ? 10 : 12} value={rangeMax} onChange={(event) => setRangeMax(event.target.value)} className="mt-1 w-full min-w-0 rounded-xl border border-border bg-background p-3" /></label>
+                    </div>
+                  )}
+                  <div hidden={fluencyInputMode === "ranges"} className="space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground">
@@ -1434,6 +1497,20 @@ export function AssignmentLauncher({ initialType = "standard" }: { initialType?:
                       );
                     })}
                   </div>
+                  </div>
+                  <button type="button" onClick={handlePoolPreview} disabled={previewLoading || loading || !selectedTeacher || !standaloneFluencyActivity()} className="rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-50">
+                    {previewLoading ? "Checking pool…" : "Preview fact pool"}
+                  </button>
+                  {!selectedTeacher && <p className="text-xs text-muted">Choose a teacher to preview the pool.</p>}
+                  {poolPreview?.key === JSON.stringify(standaloneFluencyActivity()) && (
+                    <div className="rounded-xl border border-border bg-surface p-4">
+                      <p className="text-sm font-medium">{poolPreview.facts.length} practice facts</p>
+                      <p className="mt-1 text-xs text-muted">Fixed pool; questions are sampled during practice.</p>
+                      <div className="mt-3 max-h-48 overflow-y-auto flex flex-wrap gap-2" aria-label="Expanded fact pool">
+                        {poolPreview.facts.map((fact, index) => <span key={index} className="rounded border border-border px-2 py-1 text-xs">{fact.a} {FLUENCY_OPERATORS.find((item) => item.value === fact.op)?.label} {fact.b}</span>)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
