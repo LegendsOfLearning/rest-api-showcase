@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { presets, example, type Preset, type summarize } from '@/lib/demo/fluency';
+import { presets, example, isPreset, type Preset, type summarize } from '@/lib/demo/fluency';
 type Fact = { a: number; b: number; op: string };
 const symbols: Record<string, string> = { add: '+', sub: '−', mul: '×', div: '÷' };
 export default function FluencyDemo() {
@@ -13,6 +13,16 @@ export default function FluencyDemo() {
   const [assignmentId, setAssignmentId] = useState<number>();
   const [summary, setSummary] = useState<ReturnType<typeof summarize> | null>(null);
   const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/demo/fluency', { cache: 'no-store' }).then(r => r.json()).then(data => {
+      if (active && data.assignmentId && isPreset(data.preset)) {
+        setPreset(data.preset); setAssignmentId(data.assignmentId);
+        setFacts([]);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const payload = JSON.stringify(example(preset), null, 2);
   const curl = `# Set TOKEN to your own application access token.\n# Replace the two date placeholders with YYYY-MM-DD dates.\ncurl https://api.legendsoflearning.com/api/v3/assignments \\\n  -H "Authorization: Bearer $TOKEN" \\\n  -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: my-fluency-example-1' \\\n  --data '${payload}'`;
   async function step(action: string) {
@@ -34,7 +44,7 @@ export default function FluencyDemo() {
   }
   const button = 'rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:opacity-40 hover:bg-indigo-700 transition';
   return <main className="min-h-screen bg-slate-50 text-slate-900">
-    <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5"><Link href="/demo/fluency" className="font-bold tracking-tight">Legends of Learning <span className="ml-2 font-normal text-slate-500">/ API demos</span></Link><Link href="/docs" className="text-sm font-semibold text-indigo-600">Integration guide ↗</Link></div></header>
+    <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5"><Link href="/demo/fluency" className="font-bold tracking-tight">Legends of Learning <span className="ml-2 hidden font-normal text-slate-500 sm:inline">/ API demos</span></Link><Link href="/docs" className="shrink-0 text-sm font-semibold text-indigo-600">Integration guide ↗</Link></div></header>
     <div className="mx-auto max-w-6xl px-6 py-12">
       <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Live production demo · synthetic learner</p>
       <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">From facts to fluency.</h1>
@@ -50,7 +60,7 @@ export default function FluencyDemo() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-bold"><span className="mr-3 text-indigo-600">02</span>Play it</h2>
           <p className="mt-5 text-sm leading-6 text-slate-600">Create a private demo learner and a practice assignment. Your demo session lasts one hour. First-time learners may need to complete Awakening setup before practice.</p>
-          <button className={`${button} mt-6 w-full`} disabled={!facts?.length || !!busy} onClick={() => step('launch')}>{busy === 'launch' ? 'Preparing…' : joinUrl ? 'Refresh play link' : 'Prepare practice'}</button>
+          <button className={`${button} mt-6 w-full`} disabled={(!facts?.length && !assignmentId) || !!busy} onClick={() => step('launch')}>{busy === 'launch' ? 'Preparing…' : assignmentId ? 'Refresh play link' : 'Prepare practice'}</button>
           {joinUrl && <a href={joinUrl} target="_blank" rel="noreferrer noopener" className="mt-3 block rounded-xl bg-emerald-600 px-5 py-3 text-center font-semibold text-white">Open Awakening ↗</a>}
           <p className="mt-4 text-xs leading-5 text-slate-500">Keep this page open to check results. Play links are private and expire; refresh the link if needed.</p>
         </section>
@@ -61,7 +71,7 @@ export default function FluencyDemo() {
         {!summary || !summary.answered ? <p className="mt-5 text-slate-500">No answers recorded yet. Play a few questions, then refresh. Results can take a moment to appear.</p> : <div className="mt-6 grid grid-cols-3 gap-4">{[['Answered', summary.answered], ['Correct', summary.correct ?? '—'], ['Accuracy', summary.percentCorrect === null ? '—' : `${summary.percentCorrect}%`]].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-4"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p></div>)}</div>}
         {assignmentId && <p className="mt-4 text-xs text-slate-400">Assignment {assignmentId} · Results are scoped to your demo learner.</p>}
       </section>
-      <section className="mt-10"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-2xl font-bold">Build the same flow</h2><p className="mt-2 text-sm text-slate-500">Use your own teacher and token. The example matches your selected practice.</p></div><div className="flex gap-3"><button className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={async () => { try { await navigator.clipboard.writeText(curl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError('Select and copy the example below.'); } }}>{copied ? 'Copied' : 'Copy cURL'}</button><button className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={download}>Download Python</button></div></div><pre className="mt-5 max-h-96 overflow-auto rounded-2xl bg-slate-900 p-6 text-xs leading-6 text-slate-100">{curl}</pre><p className="mt-3 text-sm text-slate-500">Python runs a dry-run preview by default. The <Link className="text-indigo-600 underline" href="/docs#awakening-fluency-facts-only">integration guide</Link> covers user creation, assignment joins, and reporting.</p></section>
+      <section className="mt-10"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-2xl font-bold">Build the same flow</h2><p className="mt-2 text-sm text-slate-500">Use your own teacher and token. The example matches your selected practice.</p></div><div className="flex gap-3"><button className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={async () => { try { await navigator.clipboard.writeText(curl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError('Select and copy the example below.'); } }}>{copied ? 'Copied' : 'Copy cURL'}</button><button className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold" onClick={download}>Download Python</button></div></div><pre className="mt-5 max-h-96 overflow-auto rounded-2xl bg-slate-900 p-6 text-xs leading-6 text-slate-100">{curl}</pre><p className="mt-3 text-sm text-slate-500">Python runs a dry-run preview by default. The <Link className="text-indigo-600 underline" href="/docs#fluency-assignments">integration guide</Link> covers user creation, assignment joins, and reporting.</p></section>
     </div>
   </main>;
 }

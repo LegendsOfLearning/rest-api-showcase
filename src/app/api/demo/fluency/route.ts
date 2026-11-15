@@ -20,6 +20,10 @@ function reply(body: unknown, session?: DemoSession, status = 200) {
   if (session) response.cookies.set(cookie, signSession(session), { httpOnly: true, secure: true, sameSite: 'strict', path: '/', maxAge: Math.max(0, Math.floor((session.expires - Date.now()) / 1000)) });
   return response;
 }
+export async function GET(request: NextRequest) {
+  const session = readSession(request.cookies.get(cookie)?.value);
+  return reply(session?.assignment ? { assignmentId: session.assignment, preset: session.preset } : {});
+}
 export async function POST(request: NextRequest) {
   if (request.headers.get('origin') !== request.nextUrl.origin) return reply({ message: 'Open the demo on this site to continue.' }, undefined, 403);
   if (!allowed(request)) return reply({ message: 'Please wait a minute before trying again.' }, undefined, 429);
