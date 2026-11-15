@@ -574,3 +574,4 @@ input[type="checkbox"] {
 .api-docs table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 0.875rem; }
 .api-docs th, .api-docs td { border: 1px solid var(--border-color); padding: 0.65rem; text-align: left; }
 .api-docs th { background: var(--surface-100); }
+.api-docs img { display: block; width: min(100%, 36rem); height: auto; margin: 1.5rem auto; border-radius: 1rem; }

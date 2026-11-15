@@ -1,45 +1,41 @@
-> **Try it live:** [Fluency demo](/demo/fluency) — preview families, ranges, or exact facts; launch a synthetic learner; check real results. No credentials needed.
-
 # Partner API quickstart
 
-Use one shared Partner API to provision app-linked users, create content or Awakening activities, launch individual learners, and retrieve results. Fluency uses this assignment flow. Partner-specific selection, identity handoff and commercial terms belong in your integration agreement.
+Create an assignment for a synthetic learner, launch it in Awakening, and read the recorded results. You need application credentials for the environment you use. [Get credentials](https://console.legendsoflearning.com/docs/registration#path-a-partner-application-v3-rest) or [try the fluency demo](https://api-showcase.legendsoflearning.com/demo/fluency) first.
 
-[Open the staging Showcase](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fpartners) · [Fluency assignment walkthrough](https://console.legendsoflearning.com/docs/fluency-assignments) · [API reference](https://console.legendsoflearning.com/docs/partner-rest-api)
+![Partner assignment flow: authenticate the backend, link teacher and learner, create and launch practice, then read recorded results.](/docs/diagrams/partner-assignment-flow.svg)
 
-## 1. Connect the intended application
+## 1. Connect your application
 
-| Environment | REST API base | Partner MCP |
-| --- | --- | --- |
-| Staging / test | `https://api.smartlittlecookies.com/api/v3` | `https://api.smartlittlecookies.com/partner/mcp` |
-| Production | `https://api.legendsoflearning.com/api/v3` | `https://api.legendsoflearning.com/partner/mcp` |
-
-Use separate applications and credentials for each environment. In the Showcase, select **Staging / test** for synthetic development and check the visible environment/application after login. The `app.smartlittlecookies.com` and `app.legendsoflearning.com` aliases also serve the corresponding API; the bases above are the canonical examples here.
-
-Your backend exchanges its `client_id` and `client_secret` at `POST /oauth2/token`, relative to that REST base, with `grant_type=client_credentials`. Send `Authorization: Bearer {access_token}` on subsequent requests. Use the returned `expires_in`; acquire a token again when needed rather than inventing a refresh-token flow. Verify `GET /applications/me` identifies the expected app before writes.
-
-The issuer may return an already active application token. Clearing a browser/client session must not revoke it: other clients may share it. Intentional `/oauth2/revoke` is an invalidation of that token for all clients sharing it, not routine cleanup. Keep credentials/tokens in protected server storage and out of browser code, prompts, logs and shared documents.
-
-Console workspace membership, OAuth application credentials and separately managed service API keys are distinct. A service key is not a `client_secret`. [Registration](https://console.legendsoflearning.com/docs/registration) explains access; [permissions](https://console.legendsoflearning.com/docs/partner-rest-api#permissions) describes the application scope boundary.
-
-## 2. Resolve stable users and choose the activity
-
-Use external `application_user_id` values scoped to your application and a trusted tenant/identity mapping. Internal numeric user IDs are different identifiers. Authorize the creator and audience on your backend; do not accept a student identity from an untrusted launch query.
-
-Create or retrieve the creator and learner through `/users`. Teacher creation requires nonempty `first_name` and `last_name`; synthetic examples can use fictional names. Linking an existing same-role account by email/Google identity is different from creating a new account and does not itself permit partner sign-in. Protected staff and relevant email-linked existing accounts can return 403 for login/join; recover with direct Legends sign-in. Do not rename or replace the underlying identity of a linked account. See [identity and launch](https://console.legendsoflearning.com/docs/partner-rest-api#identity-and-launch).
-
-Choose an activity supported by the contract:
-
-| Activity | Request entry |
+| Environment | REST API base |
 | --- | --- |
-| Content | `content_id` and its applicable `standard_id` |
-| Fluency | `type: "awakening_fluency"`, `fluency_facts`; no `standard_id` needed |
-| Other Awakening activities | Explicit mastery, focus or timed type; timed also needs `play_duration_seconds` |
+| Staging / test | `https://api.smartlittlecookies.com/api/v3` |
+| Production | `https://api.legendsoflearning.com/api/v3` |
 
-Discover current IDs with `/standard_sets`, `/standard_sets/{id}/standards`, `/content` or `/searches`. Standard-set IDs are strings and must be URL-encoded; standards/content IDs are numeric. For search, use `hits[].content.id` or `hits[].standard.id`; the outer `hits[].id` is a fresh display UUID. Collection envelopes/pagination differ: standard sets use `results`, standards/content use `entries`; content uses `per_page`, standards use `page_size`.
+Start in staging with synthetic users. All paths below are relative to the API base. The `app.smartlittlecookies.com` and `app.legendsoflearning.com` aliases also serve the corresponding API.
 
-## 3. Create the approved assignment
+Your backend sends form-encoded `grant_type=client_credentials`, `client_id` and `client_secret` to `POST /oauth2/token`. Use the returned token as `Authorization: Bearer {access_token}`, then call `GET /applications/me` to confirm the application.
 
-Call `POST /assignments` with the creator's external ID and an `activities` array. Use returned catalog IDs; numbers below are illustrative:
+Store credentials on your server. Use `expires_in` to request a new token when needed. Normal logout should clear local state without revoking a token that other clients may share. See [authentication and scopes](https://console.legendsoflearning.com/docs/partner-rest-api#environments-and-authentication).
+
+## 2. Link a teacher and learner
+
+Send a separate `POST /users` request for each identity:
+
+```json
+{"application_user_id":"partner-test-teacher-001","role":"teacher","first_name":"Integration","last_name":"Teacher"}
+```
+
+```json
+{"application_user_id":"partner-test-student-001","role":"student","first_name":"Integration","last_name":"Student"}
+```
+
+Keep these external IDs stable within your application. Teacher names must be nonempty. The response's numeric `user_id` is a different identifier: use it for user-detail and update routes, and use the external ID for assignment creation, joins and student reports.
+
+Derive identities and audience permissions from your authenticated backend. Existing-account linking has additional [sign-in restrictions](https://console.legendsoflearning.com/docs/partner-rest-api#identity-and-launch).
+
+## 3. Preview and create an assignment
+
+Use an `activities` array and the teacher's external ID. Discover content and standard IDs in your environment; the numbers below are examples.
 
 ```json
 {
@@ -49,35 +45,33 @@ Call `POST /assignments` with the creator's external ID and an `activities` arra
 }
 ```
 
-Save `assignment_id`. This `activities` form supports a stable `Idempotency-Key` for retries of the same logical creation and supports `dry_run`; legacy top-level `type: "standard"` / `type: "content"` requests implement neither feature. Do not assume a legacy retry is deduplicated or a legacy dry run prevents creation; reconcile an uncertain legacy response before retrying. If supplying a schedule, supply both dates. Optional target-user fields require the users to exist; an untargeted assignment can provision learners on first use if your audience policy permits it. The API creates/lists/reads assignments and creates joins; it has no public assignment update/delete operation.
+Send this body to `POST /assignments` with `dry_run: true` to preview. Remove `dry_run` to create, include a stable `Idempotency-Key` for retries, and save `assignment_id`. If you supply a schedule, include both dates as `YYYY-MM-DD`.
 
-## 4. Launch one authorized learner
+For arithmetic practice, follow [Fluency assignments](https://console.legendsoflearning.com/docs/fluency-assignments): supply facts, family seeds or ranges directly without a standard lookup. The [REST reference](https://console.legendsoflearning.com/docs/partner-rest-api#assignment-capabilities) covers other activity types, audience fields and legacy request limits.
 
-Create or resolve the learner when needed, then call **plural** `POST /assignments/{id}/joins`:
+## 4. Launch the learner
+
+Send `POST /assignments/{id}/joins`:
 
 ```json
 {"application_user_id":"partner-test-student-001","target":"awakening"}
 ```
 
-Use Awakening for fluency/standard activities. The API also accepts `web` for supported content experiences. Send the individual learner to the returned `join_url` exactly as returned; do not share it across students or publish it in a lesson resource. Current assignment tokens last 24 hours. Standalone `/users/login_link` has a separate 10-second default, configurable up to 300 seconds; it is not the same launch contract. No default iframe integration is established by these URLs.
+Open the returned `join_url` for that learner exactly as returned. Generate it when the learner launches and keep it out of shared resources and logs. Assignment joins currently last 24 hours. A new learner may need to complete Awakening setup.
 
-## 5. Read the results that exist
+Use Awakening for fluency and standard activities; supported content can also use `web`. Standalone login links and iframe integration have separate rules in [identity and launch](https://console.legendsoflearning.com/docs/partner-rest-api#identity-and-launch).
 
-Read `GET /assignments/{id}?view=player&page=1&page_size=10&include=activities,players`, then `GET /students/{application_user_id}?view=assignment&page=1&page_size=10` when learner history is needed.
+## 5. Read results after practice
 
-Only the assignment's `players` envelope is paginated. Aggregate arrays such as `by_player` are separate and can contain one row per PlayerActivity, including multiple activity rows for the same learner; do not count them as one combined row per learner. Activity detail includes answered/correct counts, correctness percentage, recorded playtime seconds and start/completion fields. A zero-answer percentage can be null; a configured duration is not observed playtime. See [reporting](https://console.legendsoflearning.com/docs/partner-rest-api#reporting).
+Call `GET /assignments/{id}?view=player&page=1&page_size=10&include=activities,players`.
 
-Learner/standard reports first resolve app-linked learners but may aggregate their broader nondeleted activity history, including native/shared/migrated activity. They are not guaranteed to contain only assignments created by your application or a requested date window. Assignment access is based on creator membership in the calling app; it is not an immutable origin tag.
+Read recorded counts and playtime from `players.entries[].activities[]`, and follow the `players` pagination metadata. Empty results are expected before practice. Configured fluency facts describe the exercise pool; they do not report per-fact mastery.
 
-For fluency, returned `fluency_facts` are the configured exercise pool, not measured per-fact mastery. There is no public per-fact attempts, latency, trial history or adaptive-progress contract. Verify populated results with actual synthetic play before promising a results-dependent pilot, gradebook update or webhook workflow.
+The [reporting reference](https://console.legendsoflearning.com/docs/partner-rest-api#reporting) explains aggregate rows, units, completion fields and learner-history scope. Test with two synthetic learners and check populated results before using them for a pilot or gradebook workflow.
 
-## References and examples
+## Continue with code
 
-- [Fluency: assignment → learner launch → results](https://console.legendsoflearning.com/docs/fluency-assignments)
-- [REST API contract and scopes](https://console.legendsoflearning.com/docs/partner-rest-api)
-- [Partner MCP: server-to-server Bearer client](https://console.legendsoflearning.com/docs/partner-mcp)
-- [Otus Insights addendum](https://console.legendsoflearning.com/docs/otus-insights) — a labeled partner example, not a prerequisite for using the API
-- [Swagger](https://api.smartlittlecookies.com/api/v3/docs/swagger-ui) · [OpenAPI](https://api.smartlittlecookies.com/api/v3/docs/openapi) · [Public Showcase source](https://github.com/LegendsOfLearning/rest-api-showcase)
+[Download the Python examples](https://console.legendsoflearning.com/docs/tools-and-examples), replay calls in the [staging Showcase](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fpartners), or run the same operations through [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp). The [Otus Insights example](https://console.legendsoflearning.com/docs/otus-insights) shows a partner-specific recommendation and teacher-confirmation flow.
 
 ## Application permissions
 
@@ -101,11 +95,13 @@ Business routes enforce the calling application's configured scopes. For resourc
 
 ## Fluency assignments
 
-Fluency is a shared Partner API capability. Create an `awakening_fluency` activity through `/assignments`, launch learners through `/assignments/{id}/joins`, and read the existing assignment/player reports. Use the same application credentials and learner identities as other assignment activities.
+Create fluency practice with an `awakening_fluency` assignment activity. Use the same application credentials, learner IDs, joins and reports as other Partner API activities.
 
 [Staging Showcase fluency builder](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fassignments%2Fbuild%3Ftype%3Dfluency) · [Authentication and permissions](https://console.legendsoflearning.com/docs/partner-rest-api) · [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp)
 
 Download [the Python API client](https://console.legendsoflearning.com/docs/examples/partner-api/partner_client.py) and [the fluency walkthrough](https://console.legendsoflearning.com/docs/examples/partner-api/fluency_quickstart.py) into the same directory. Run `python3 fluency_quickstart.py --help` for protected credential prompts, staging defaults and explicit-facts/fallback options.
+
+Try the [editable fluency demo](https://api-showcase.legendsoflearning.com/demo/fluency) without credentials. Its fact editor, generator and code examples use the same selectors described below.
 
 ### Before you start
 
@@ -133,11 +129,33 @@ Send `POST /assignments` with an idempotency key for this logical assignment:
 }
 ```
 
-The response contains `assignment_id`. The server associates a curated fluency learning objective internally for launch and reporting; this does not change your fact pool. Existing explicit `standard_id` requests remain supported. The type alias `fluency` and the `facts` field alias are also accepted. Operands must be integers; operations are `add`, `sub`, `mul`, `div`. Division requires a nonzero divisor and an integer quotient. Invalid facts return 422.
+The response contains `assignment_id`. The server supplies the internal fluency learning objective used for launch and reporting while preserving your fact pool. Existing explicit `standard_id` requests remain supported. The type alias `fluency` and the `facts` field alias are also accepted. Operands must be integers; operations are `add`, `sub`, `mul`, `div`. Division requires a nonzero divisor and an integer quotient. Invalid facts return 422.
 
-A nonempty explicit `fluency_facts` list takes precedence over the learner's current focus. The list is an exercise pool: the runtime samples facts and does not promise every configured fact is attempted. If facts are omitted or empty, fluency falls back to the persisted Math Basecamp daily-target/practice mix; an empty list does not request zero practice. That fallback depends on learner state. The compatibility `facts` alias exists, but use `fluency_facts` for new clients.
+A nonempty explicit `fluency_facts` list takes precedence over the learner's current focus. The runtime samples the exercise pool, so a learner may not attempt every configured fact. If facts are omitted or empty, fluency falls back to the persisted Math Basecamp daily-target/practice mix; an empty list does not request zero practice. That fallback depends on learner state. The compatibility `facts` alias exists, but use `fluency_facts` for new clients.
 
 `awakening_mastery`, `awakening_focus` and `awakening_timed` are distinct activity types. Timed requires positive `play_duration_seconds`; configured duration is not measured time spent. These types do not create a partner-facing assessment/trial-submission engine or let the partner reset global adaptive progression.
+
+#### Families and operator ranges
+
+![The seed 3 × 9 expands to 3 × 9, 9 × 3, 27 ÷ 3 and 27 ÷ 9.](/docs/diagrams/fluency-family.svg)
+
+Use one input mode per activity: exact `fluency_facts`, `fluency_fact_families`, or `fluency_fact_ranges`.
+
+```json
+{"type":"awakening_fluency","fluency_fact_families":[{"op":"mul","a":3,"b":9}]}
+```
+
+This selects the existing Basecamp family: `3×9`, `9×3`, `27÷3`, `27÷9`. Addition `2+3` includes `2+3`, `3+2`, `5−2`, `5−3`. Seeds may use `add`, `sub`, `mul` or `div`; unsupported catalog families return an indexed 422. Repeated facts are deduplicated.
+
+```json
+{"type":"awakening_fluency","fluency_fact_ranges":[{"op":"add","min":0,"max":10},{"op":"mul","min":0,"max":12}]}
+```
+
+Range bounds are inclusive and apply to both operands. `add` supports 0 to 10 and `mul` supports 0 to 12; `min` must not exceed `max`. Ranges generate only the selected operators, including zero operands. Use families to include inverse relationships. Overlapping ranges are deduplicated.
+
+Each new selector accepts 1 to 250 entries. Explicit empty/null selectors, conflicting input modes, invalid bounds, and unsupported families return 422. Omitted/empty raw facts retain the existing daily-mix fallback when neither new selector is supplied.
+
+Send `dry_run: true` with the normal assignment request to inspect the expanded `activities[].fluency_facts` before creating. Creation stores that same fixed pool; assignment reads return it. Families/ranges do not enable adaptive progression, target weighting, mastered-fact infilling, or A/B presentation rotation. The original shorthand is not retained in reports.
 
 ### 2. Launch the learner into Awakening
 
@@ -151,7 +169,7 @@ Resolve the learner and their authorized audience on your backend. Return the ge
 
 A new learner's first launch includes Awakening onboarding. Reuse a prepared synthetic learner for a short practice demo.
 
-The Showcase's fluency builder supports an explicit fact pool and selects Awakening. Use the API walkthrough to exercise omitted-facts fallback; the builder does not claim to configure the persisted daily practice mix.
+The Showcase builder previews exact facts, families and ranges and launches Awakening. Use the API walkthrough to test the learner's saved daily mix; the builder does not configure that mix.
 
 ### 3. Read assignment and learner results
 
@@ -167,28 +185,14 @@ Use `GET /assignments/{id}?view=player&include=activities,players&page=1&page_si
 
 `by_player` is a separate aggregate view derived from PlayerActivity rows and may contain several rows per learner. It is not the paginated player-detail envelope. Read `/students/{application_user_id}?view=assignment` for learner assignment history, with the broader-history boundary in the [reporting contract](https://console.legendsoflearning.com/docs/partner-rest-api#reporting).
 
-The assignment's returned `fluency_facts` describes configuration. It does **not** report mastery, attempts or latency for each fact. There is no dedicated public per-fact fluency analytics/trial-history API, and total V2 mastery stars from `/users/{id}/mastery_completed_v2_count` are not a count of fluent arithmetic facts.
+The assignment's returned `fluency_facts` describes configuration. It does not report mastery, attempts or latency for each fact. There is no dedicated public per-fact fluency analytics/trial-history API, and total V2 mastery stars from `/users/{id}/mastery_completed_v2_count` are not a count of fluent arithmetic facts.
 
 ### Verify a populated pilot
 
 Use two authorized synthetic learners, explicit facts and omitted-facts fallback. Check assignment creation/idempotency, individual Awakening launch, actual practice and populated result fields against the agreed definition. Successful creation, a launch shell or an empty report alone does not prove gameplay completion or adaptive/per-fact analytics. Agree additional reporting needs before promising them.
 
-## Partner MCP authentication
+## Continue building
 
-Partner MCP uses the same environment-specific application access token in an explicit `Authorization: Bearer` header. Your backend obtains/renews it via `grant_type=client_credentials`. The endpoint URL alone does not provide interactive ChatGPT/browser consent, OAuth client registration or a partner refresh flow. Staff MCP OAuth is separate. Keep tokens out of tool arguments. [Connection guide](https://console.legendsoflearning.com/docs/partner-mcp).
+[Developer documentation](https://console.legendsoflearning.com/docs) has the REST reporting contract, Partner MCP setup and separate user sign-in guides. [Tools and examples](https://console.legendsoflearning.com/docs/tools-and-examples) links the Python clients, OpenAPI schemas and source repositories.
 
-## Reuse with a coding agent
-
-Read this maintained guide and the environment’s live OpenAPI before copying code. Give the agent no credentials, user records or launch URLs. Store credentials through your protected backend setup. Reuse the server-side endpoint/proxy pattern rather than browser cookies or this demo’s authentication as a production identity model. Verify authorization, idempotent retries and populated results in your own application.
-
-- `src/app/api/auth/login/route.ts`: allowlisted environment-specific client-credentials exchange.
-- `src/app/api/[...legends]/route.ts`: server-only Bearer proxy.
-- `src/lib/api/endpoints.ts`: REST endpoint helpers.
-- `src/components/assignments/AssignmentLauncher.tsx`: teacher-created assignments, fluency and plural joins.
-- `src/app/api/auth/logout/route.ts`: local cookie cleanup without revoking shared application tokens.
-
-The private Console manages workspaces, applications and access. This public repo demonstrates one application’s API use; it does not create production credentials or replace a partner’s own user/audience authorization.
-
-## Fluency pool selectors
-
-Fluency activities accept one of `fluency_facts`, `fluency_fact_families` (`{op,a,b}` seeds), or `fluency_fact_ranges` (`{op,min,max}`). Families include Basecamp inverse relationships; ranges generate the named operator with inclusive bounds for both operands (add 0–10, mul 0–12). Dry-run returns the expanded fixed pool in `activities[].fluency_facts`; create and reporting use the same pool. REST and MCP use identical validation. These selectors do not enable adaptive progression. See the [fluency guide](https://console.legendsoflearning.com/docs/fluency-assignments) for examples and limits.
+This Showcase demonstrates API calls for one application. Your backend must authorize teachers, learners and assignment audiences. Keep credentials and learner launch URLs out of prompts and shared logs.

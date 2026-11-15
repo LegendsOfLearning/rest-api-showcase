@@ -2,11 +2,11 @@
 
 Public reference app for working with the Legends of Learning V3 REST API from one OAuth application.
 
-This repository is intentionally app-scoped. It demonstrates the code a partner team or coding agent can reuse to build against Legends APIs: authenticate with client credentials, inspect content and standards, create test users, build assignments, generate launch links, and review request activity.
+Use the code in this repository to build an integration for one OAuth application: authenticate with client credentials, inspect content and standards, create test users, build assignments, generate launch links, and review request activity.
 
 The first-party Legends Partner Portal remains private. Use it to create applications, rotate credentials, manage team access, and configure app branding before running this showcase.
 
-## What This App Demonstrates
+## API examples
 
 ### Authentication
 
@@ -14,14 +14,14 @@ The first-party Legends Partner Portal remains private. Use it to create applica
 - Stores the access token in an HTTP-only local cookie for the demo session.
 - Proxies browser requests through Next.js route handlers so secrets never ship to the client.
 
-### Content And Standards
+### Content and standards
 
 - Browses content exposed through the V3 API.
 - Searches content and standards.
 - Inspects content metadata before using it in an assignment payload.
 - Confirms standard IDs and standard-set IDs for API requests.
 
-### Users And Launch
+### Users and launch
 
 - Creates teacher and student test users.
 - Generates teacher login links.
@@ -32,7 +32,7 @@ The first-party Legends Partner Portal remains private. Use it to create applica
 
 [Shared API guide](docs/api-documentation.md) covers application credentials, identity guards, fluency assignments, individual Awakening joins and reporting limits. The deployed `/docs` page renders this same file. Start with staging; keep credentials outside agents and repository files. [Open the fluency builder](https://api-showcase.legendsoflearning.com/assignments/build?type=fluency) after signing in to the intended test application.
 
-### Agent-Friendly Source Map
+### Source map
 
 - `src/app/api/auth/login/route.ts`: OAuth client-credentials login.
 - `src/app/api/[...legends]/route.ts`: server-side API proxy.
@@ -41,14 +41,14 @@ The first-party Legends Partner Portal remains private. Use it to create applica
 - `src/components/assignments/AssignmentLauncher.tsx`: assignment and join-link examples.
 - `src/app/partners/page.tsx`: launch and branded-player checks for the active app.
 
-## What This App Does Not Do
+## Partner management
 
 - Manage partner workspaces or team members.
 - Create, rotate, revoke, or reveal production API keys.
 - Edit app branding.
 - Replace the private first-party Partner Portal.
 
-## Local Setup
+## Local setup
 
 ### Prerequisites
 
@@ -86,7 +86,7 @@ pnpm dev
 
 Open `http://localhost:3000`, sign in with one app's OAuth client credentials, and use the API pages as implementation examples.
 
-## Project Structure
+## Project structure
 
 ```text
 rest-api-showcase/
@@ -122,7 +122,7 @@ fix(assignments): preserve target player selection
 chore(docs): update source map
 ```
 
-## Review Checklist
+## Review checklist
 
 - Keep the public app scoped to one OAuth application.
 - Keep first-party partner management out of this repository.
