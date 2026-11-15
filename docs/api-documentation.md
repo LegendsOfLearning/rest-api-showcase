@@ -1,3 +1,5 @@
+> **Try it live:** [Fluency demo](/demo/fluency) — preview families, ranges, or exact facts; launch a synthetic learner; check real results. No credentials needed.
+
 # Partner API quickstart
 
 Use one shared Partner API to provision app-linked users, create content or Awakening activities, launch individual learners, and retrieve results. Fluency uses this assignment flow. Partner-specific selection, identity handoff and commercial terms belong in your integration agreement.
