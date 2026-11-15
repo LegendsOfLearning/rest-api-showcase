@@ -18,6 +18,37 @@ export function summarize(players: ReportPlayer[]) {
     playtimeSec: sum('reported_playtime_sec'), players: players.length,
     completedPlayers: players.filter(p => p.activities?.length && p.activities.every(a => a.completed_at)).length };
 }
-export function example(preset: Preset) {
-  return { application_user_id: 'demo-teacher', name: 'Fluency API demo', start_date: 'REPLACE_START_DATE', end_date: 'REPLACE_END_DATE', activities: [presets[preset].activity] };
+export function example(practice: Practice) {
+  return { application_user_id: 'demo-teacher', name: 'Fluency API demo', start_date: 'REPLACE_START_DATE', end_date: 'REPLACE_END_DATE', activities: [practiceActivity(practice)] };
+}
+
+export type PracticeFact = { a: number; b: number; op: 'add' | 'sub' | 'mul' | 'div' };
+export type PracticeRange = { op: 'add' | 'mul'; min: number; max: number };
+export type Practice = { mode: 'exact' | 'family'; facts: PracticeFact[] } | { mode: 'range'; ranges: PracticeRange[] };
+export function defaultPractice(preset: Preset): Practice {
+  if (preset === 'range') return { mode: 'range', ranges: presets.range.activity.fluency_fact_ranges.map(r => ({ ...r })) };
+  return { mode: preset, facts: (preset === 'family' ? presets.family.activity.fluency_fact_families : presets.exact.activity.fluency_facts).map(f => ({ ...f })) };
+}
+export function parsePractice(value: unknown): Practice {
+  if (!value || typeof value !== 'object') throw new Error('Choose exact facts, families, or ranges.');
+  const input = value as Record<string, unknown>;
+  if (!['exact', 'family', 'range'].includes(String(input.mode))) throw new Error('Choose exact facts, families, or ranges.');
+  const rows = input.mode === 'range' ? input.ranges : input.facts;
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 20) throw new Error('Enter between 1 and 20 rows.');
+  const integer = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 144;
+  if (input.mode === 'range') return { mode: 'range', ranges: rows.map(r => {
+    if (!r || !['add', 'mul'].includes(r.op) || !integer(r.min) || !integer(r.max) || r.min > r.max || r.max > (r.op === 'add' ? 10 : 12)) throw new Error('Ranges need inclusive bounds: addition 0–10 or multiplication 0–12, with minimum ≤ maximum.');
+    return { op: r.op, min: r.min, max: r.max };
+  }) };
+  return { mode: input.mode as 'exact' | 'family', facts: rows.map(r => {
+    if (!r || !['add', 'sub', 'mul', 'div'].includes(r.op) || !integer(r.a) || !integer(r.b)) throw new Error('Facts need an operator and whole-number operands from 0 to 144.');
+    if (r.op === 'div' && (r.b === 0 || r.a % r.b !== 0)) throw new Error('Division needs a nonzero divisor and a whole-number answer.');
+    if (r.op === 'sub' && r.a < r.b) throw new Error('Subtraction needs a nonnegative answer.');
+    return { a: r.a, b: r.b, op: r.op };
+  }) };
+}
+export function practiceActivity(practice: Practice) {
+  if (practice.mode === 'range') return { type: 'awakening_fluency', fluency_fact_ranges: practice.ranges };
+  if (practice.mode === 'family') return { type: 'awakening_fluency', fluency_fact_families: practice.facts };
+  return { type: 'awakening_fluency', fluency_facts: practice.facts };
 }

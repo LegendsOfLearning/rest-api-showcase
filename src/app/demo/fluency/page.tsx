@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { presets, example, isPreset, type Preset, type summarize } from '@/lib/demo/fluency';
+import { example, defaultPractice, parsePractice, type Practice, type PracticeFact, type PracticeRange, type Preset, type summarize } from '@/lib/demo/fluency';
 type Fact = { a: number; b: number; op: string };
 const symbols: Record<string, string> = { add: '+', sub: '−', mul: '×', div: '÷' };
 export default function FluencyDemo() {
-  const [preset, setPreset] = useState<Preset>('family');
+  const [practice, setPractice] = useState<Practice>(() => defaultPractice('family'));
+  const [ready, setReady] = useState(false);
   const [facts, setFacts] = useState<Fact[] | null>(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -15,20 +16,31 @@ export default function FluencyDemo() {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     let active = true;
-    fetch('/api/demo/fluency', { cache: 'no-store' }).then(r => r.json()).then(data => {
-      if (active && data.assignmentId && isPreset(data.preset)) {
-        setPreset(data.preset); setAssignmentId(data.assignmentId);
-        setFacts([]);
-      }
-    }).catch(() => {});
+    (async () => {
+      try {
+        const response = await fetch('/api/demo/fluency', { cache: 'no-store' });
+        const data = await response.json();
+        if (!active || !data.practice) return;
+        const restored = parsePractice(data.practice);
+        setPractice(restored); setAssignmentId(data.assignmentId);
+        const preview = await fetch('/api/demo/fluency', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'preview', practice: restored }), cache: 'no-store' });
+        const result = await preview.json();
+        if (active && preview.ok) setFacts(result.activities[0].fluency_facts);
+        else if (active) setError(result.message);
+      } catch { if (active) setError('Could not restore your preview. Generate the fact pool to try again.'); }
+      finally { if (active) setReady(true); }
+    })();
     return () => { active = false; };
   }, []);
-  const payload = JSON.stringify(example(preset), null, 2);
+  function edit(next: Practice) {
+    setPractice(next); setFacts(null); setJoinUrl(''); setAssignmentId(undefined); setSummary(null); setError(''); setCopied(false);
+  }
+  const payload = JSON.stringify(example(practice), null, 2);
   const curl = `# Set TOKEN to your own application access token.\n# Replace the two date placeholders with YYYY-MM-DD dates.\ncurl https://api.legendsoflearning.com/api/v3/assignments \\\n  -H "Authorization: Bearer $TOKEN" \\\n  -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: my-fluency-example-1' \\\n  --data '${payload}'`;
   async function step(action: string) {
     setBusy(action); setError('');
     try {
-      const response = await fetch('/api/demo/fluency', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, preset }), cache: 'no-store' });
+      const response = await fetch('/api/demo/fluency', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...(action === 'results' ? {} : { practice: parsePractice(practice) }) }), cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
       if (action === 'preview') setFacts(data.activities?.[0]?.fluency_facts ?? []);
@@ -52,10 +64,30 @@ export default function FluencyDemo() {
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
           <h2 className="text-xl font-bold"><span className="mr-3 text-indigo-600">01</span>Choose the practice</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">{(Object.keys(presets) as Preset[]).map(key => <button key={key} disabled={!!assignmentId || !!busy} onClick={() => { setPreset(key); setFacts(null); }} aria-pressed={preset === key} className={`rounded-xl border p-4 text-left text-sm font-semibold disabled:opacity-60 ${preset === key ? 'border-indigo-600 bg-indigo-50 text-indigo-800' : 'border-slate-200 hover:border-indigo-300'}`}>{presets[key].label}</button>)}</div>
-          <p className="mt-4 text-sm text-slate-500">Families include inverse facts. Ranges include both operand endpoints. Exact facts stay exactly as supplied.</p>
-          <button className={`${button} mt-6`} disabled={!!busy || !!assignmentId} onClick={() => step('preview')}>{busy === 'preview' ? 'Previewing…' : 'Preview fact pool'}</button>
-          {facts && <div className="mt-6"><p className="mb-3 text-sm font-semibold">{facts.length} facts returned by the API</p><div className="flex max-h-64 flex-wrap gap-2 overflow-auto">{facts.map((f, i) => <span key={i} className="rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm">{f.a} {symbols[f.op] ?? f.op} {f.b}</span>)}</div></div>}
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">{([['family', 'Fact families'], ['range', 'Operator ranges'], ['exact', 'Exact facts']] as [Preset, string][]).map(([key, label]) => <button key={key} disabled={!ready || !!busy} onClick={() => edit(defaultPractice(key))} aria-pressed={practice.mode === key} className={`rounded-xl border p-4 text-left text-sm font-semibold disabled:opacity-60 ${practice.mode === key ? 'border-indigo-600 bg-indigo-50 text-indigo-800' : 'border-slate-200 hover:border-indigo-300'}`}>{label}</button>)}</div>
+          <p className="mt-4 text-sm text-slate-500">{practice.mode === 'family' ? 'Choose a seed fact. The API generates its family, including inverse facts.' : practice.mode === 'range' ? 'Generate every fact for both operands within your inclusive bounds. Addition: 0–10. Multiplication: 0–12.' : 'Choose the exact facts you want learners to practice.'}</p>
+          <fieldset disabled={!ready || !!busy} className="mt-5 space-y-3">
+            <legend className="sr-only">Practice generator inputs</legend>
+            {(practice.mode === 'range' ? practice.ranges : practice.facts).map((row, index) => <div key={index} className="flex flex-wrap items-end gap-2 rounded-xl bg-slate-50 p-3">
+              <label className="min-w-28 flex-1 text-xs font-semibold text-slate-600">Operator {index + 1}<select aria-label={`Operator ${index + 1}`} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900" value={row.op} onChange={e => {
+                if (practice.mode === 'range') edit({ ...practice, ranges: practice.ranges.map((r, i) => i === index ? { ...r, op: e.target.value as PracticeRange['op'] } : r) });
+                else edit({ ...practice, facts: practice.facts.map((r, i) => i === index ? { ...r, op: e.target.value as PracticeFact['op'] } : r) });
+              }}>{(practice.mode === 'range' ? ['add', 'mul'] : ['add', 'sub', 'mul', 'div']).map(op => <option key={op} value={op}>{{ add: 'Addition +', sub: 'Subtraction −', mul: 'Multiplication ×', div: 'Division ÷' }[op]}</option>)}</select></label>
+              {(practice.mode === 'range' ? ['min', 'max'] : ['a', 'b']).map(field => {
+                const label = { min: 'Minimum', max: 'Maximum', a: 'First operand', b: 'Second operand' }[field];
+                const value = (row as unknown as Record<string, number>)[field];
+                return <label key={field} className="w-28 flex-1 text-xs font-semibold text-slate-600">{label}<input type="number" min="0" max={practice.mode === 'range' ? row.op === 'add' ? 10 : 12 : 144} step="1" aria-label={`${label} ${index + 1}`} value={Number.isFinite(value) ? value : ''} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900" onChange={e => {
+                  const value = e.target.value === '' ? NaN : Number(e.target.value);
+                  if (practice.mode === 'range') edit({ ...practice, ranges: practice.ranges.map((r, i) => i === index ? { ...r, [field]: value } : r) });
+                  else edit({ ...practice, facts: practice.facts.map((r, i) => i === index ? { ...r, [field]: value } : r) });
+                }} /></label>;
+              })}
+              <button type="button" aria-label={`Remove row ${index + 1}`} disabled={(practice.mode === 'range' ? practice.ranges : practice.facts).length === 1} className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-30" onClick={() => practice.mode === 'range' ? edit({ ...practice, ranges: practice.ranges.filter((_, i) => i !== index) }) : edit({ ...practice, facts: practice.facts.filter((_, i) => i !== index) })}>Remove</button>
+            </div>)}
+            <button type="button" disabled={(practice.mode === 'range' ? practice.ranges : practice.facts).length >= 20} className="text-sm font-semibold text-indigo-600 disabled:opacity-40" onClick={() => practice.mode === 'range' ? edit({ ...practice, ranges: [...practice.ranges, { op: 'mul', min: 0, max: 3 }] }) : edit({ ...practice, facts: [...practice.facts, { op: 'add', a: 2, b: 3 }] })}>+ Add {practice.mode === 'range' ? 'range' : practice.mode === 'family' ? 'family seed' : 'fact'}</button>
+          </fieldset>
+          <button className={`${button} mt-6`} disabled={!ready || !!busy} onClick={() => step('preview')}>{busy === 'preview' ? 'Generating…' : 'Generate fact pool'}</button>
+          {facts && facts.length > 0 && <div className="mt-6"><p className="mb-3 text-sm font-semibold">{facts.length} facts returned by the API</p><div className="flex max-h-64 flex-wrap gap-2 overflow-auto">{facts.map((f, i) => <span key={i} className="rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm">{f.a} {symbols[f.op] ?? f.op} {f.b}</span>)}</div></div>}
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-bold"><span className="mr-3 text-indigo-600">02</span>Play it</h2>
