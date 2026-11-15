@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Set identities first, using idempotent user upserts; no emails or real learner data.
     if (input.action === 'launch') await demoApi('/users', { application_user_id: teacher, role: 'teacher', first_name: 'Demo', last_name: 'Teacher' });
     const now = new Date(), end = new Date(session.expires);
-    const assignment = { application_user_id: teacher, name: 'Fluency API demo', start_date: now.toISOString(), end_date: end.toISOString(), activities: [presets[preset].activity] };
+    const assignment = { application_user_id: teacher, name: 'Fluency API demo', start_date: now.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10), activities: [presets[preset].activity] };
     if (input.action === 'preview') {
       const data = await demoApi('/assignments', { ...assignment, application_user_id: 'fluency-demo-preview-teacher', dry_run: true });
       return reply({ activities: data.activities }, session);
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     await demoApi('/users', { application_user_id: student, role: 'student', first_name: 'Demo', last_name: 'Learner' });
     if (!session.assignment) {
       // Stable payload and key make retries (including a lost HTTP response) safe.
-      assignment.start_date = new Date(session.expires - 60 * 60 * 1000).toISOString();
+      assignment.start_date = new Date(session.expires - 60 * 60 * 1000).toISOString().slice(0, 10);
       const created = await demoApi('/assignments', assignment, `fluency-demo-${session.id}-${input.preset}`);
       const id = Number(created.assignment_id);
       if (!Number.isSafeInteger(id) || id < 1) throw new Error('Invalid assignment');
