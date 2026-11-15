@@ -13,6 +13,7 @@ export const consoleNavSections: ConsoleNavSection[] = [
   {
     label: "Showcase",
     items: [
+      { href: "/demo/fluency", label: "Try fluency demo" },
       { href: "/partners", label: "Launch & SSO" },
       { href: "/docs", label: "Integration Guide" },
     ],

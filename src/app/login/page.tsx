@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { defaultShowcaseEnvironment } from "@/lib/server/api-base";
 import { parseShowcaseEnvironment } from "@/lib/api/environment";
 import { ClientCredentialsLoginForm } from "@/components/auth/ClientCredentialsLoginForm";
@@ -26,6 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-app px-6 py-10">
       <div className="w-full max-w-md">
+        <Link href="/demo/fluency" className="mb-6 block text-center font-semibold text-accent underline">Try the fluency demo — no credentials needed ↗</Link>
         <ClientCredentialsLoginForm
           nextPath={nextPath}
           initialEnvironment={environment}

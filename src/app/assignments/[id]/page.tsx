@@ -4,24 +4,12 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { API_ENDPOINTS } from '@/lib/api/endpoints';
 import Link from 'next/link';
+import { summarize, type ReportPlayer } from '@/lib/demo/fluency';
 import type { AssignmentDetailResponse } from '@/types/api';
 
 type ViewType = 'default' | 'activity' | 'activity_by_player' | 'player' | 'standard' | 'standard_by_student';
 
-type PlayerAssignment = {
-  player_id: number;
-  start_time?: string;
-  end_time?: string;
-  activities?: Array<{
-    assignment_activity_id: number;
-    end_time?: string;
-  }>;
-};
-
-type Player = {
-  id: number;
-  name?: string;
-};
+type Player = ReportPlayer & { first_name?: string; last_name?: string };
 
 type ActivityWithStats = NonNullable<AssignmentDetailResponse['assignment']['activities']>[0] & {
   totalPlayers: number;
@@ -29,9 +17,8 @@ type ActivityWithStats = NonNullable<AssignmentDetailResponse['assignment']['act
   completionRate: number;
 };
 
-type ExtendedAssignmentDetailResponse = AssignmentDetailResponse & {
-  players?: Player[];
-  player_assignments?: PlayerAssignment[];
+type ExtendedAssignmentDetailResponse = Omit<AssignmentDetailResponse, 'players'> & {
+  players?: { entries: Player[]; total_pages: number };
   standards?: Array<{
     id: number;
     label?: string;
@@ -55,12 +42,18 @@ export default function AssignmentDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const url = detailView === 'default' 
-          ? API_ENDPOINTS.ASSIGNMENT(Number(assignmentId))
-          : `${API_ENDPOINTS.ASSIGNMENT(Number(assignmentId))}?view=${detailView}`;
+        const query = new URLSearchParams({ view: detailView === 'default' ? 'player' : detailView, include: 'activities,players,by_activity', page_size: '100' });
+        const url = `${API_ENDPOINTS.ASSIGNMENT(Number(assignmentId))}?${query}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to load assignment');
         const data = await res.json();
+        const players = [...(data.players?.entries ?? [])];
+        for (let page = 2; page <= (data.players?.total_pages ?? 1); page++) {
+          const next = await fetch(`${url}&page=${page}`);
+          if (!next.ok) throw new Error('Failed to load all player results');
+          players.push(...((await next.json()).players?.entries ?? []));
+        }
+        data.players = { ...data.players, entries: players };
         setAssignment(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load assignment');
@@ -78,48 +71,25 @@ export default function AssignmentDetailPage() {
 
     const assignmentData = assignment.assignment;
     const activities = assignmentData.activities || [];
-    const players = assignment.players || [];
-    const playerAssignments = assignment.player_assignments || [];
-
-    const playersArray = Array.isArray(players) ? players : (players as { entries?: Player[] })?.entries || [];
-    const totalPlayers = playersArray.length || playerAssignments.length || 0;
-    const completedPlayers = playerAssignments.filter((pa) => pa.end_time).length;
-    const completionRate = totalPlayers > 0 ? (completedPlayers / totalPlayers) * 100 : 0;
-
-    // Calculate activity completion stats
-    const activityStats: ActivityWithStats[] = activities.map((activity) => {
-      const activityPlayers = playerAssignments.filter((pa) => 
-        pa.activities?.some((a) => a.assignment_activity_id === activity.id)
-      );
-      const completed = activityPlayers.filter((pa) => 
-        pa.activities?.some((a) => a.assignment_activity_id === activity.id && a.end_time)
-      );
-      return {
-        ...activity,
-        totalPlayers: activityPlayers.length,
-        completedPlayers: completed.length,
-        completionRate: activityPlayers.length > 0 ? (completed.length / activityPlayers.length) * 100 : 0,
-      };
+    const playersArray = assignment.players?.entries ?? [];
+    const totals = summarize(playersArray);
+    const totalPlayers = totals.players, completedPlayers = totals.completedPlayers;
+    const completionRate = totalPlayers ? completedPlayers / totalPlayers * 100 : 0;
+    const activityStats: ActivityWithStats[] = activities.map(activity => {
+      const participants = playersArray.filter(p => p.activities?.some(a => a.id === activity.id));
+      const completed = participants.filter(p => {
+        const rows = p.activities?.filter(a => a.id === activity.id) ?? [];
+        return rows.length > 0 && rows.every(a => a.completed_at);
+      });
+      return { ...activity, totalPlayers: participants.length, completedPlayers: completed.length, completionRate: participants.length ? completed.length / participants.length * 100 : 0 };
     });
-
-    // Calculate average playtime
-    const playtimes = playerAssignments
-      .map((pa) => {
-        if (!pa.start_time || !pa.end_time) return null;
-        const start = new Date(pa.start_time).getTime();
-        const end = new Date(pa.end_time).getTime();
-        return (end - start) / 1000 / 60; // minutes
-      })
-      .filter((t): t is number => t !== null);
-    const avgPlaytime = playtimes.length > 0 
-      ? playtimes.reduce((a, b) => a + b, 0) / playtimes.length 
-      : 0;
+    const avgPlaytime = totals.playtimeSec !== null && totalPlayers ? totals.playtimeSec / totalPlayers / 60 : null;
 
     return {
       totalPlayers,
       completedPlayers,
       completionRate,
-      avgPlaytime: Math.round(avgPlaytime),
+      avgPlaytime: avgPlaytime === null ? '—' : Math.round(avgPlaytime),
       activityStats,
       startDate: assignmentData?.start_date,
       endDate: assignmentData?.end_date,
@@ -218,7 +188,7 @@ export default function AssignmentDetailPage() {
         {metrics && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="text-sm text-muted mb-1">Total Players</div>
+              <div className="text-sm text-muted mb-1">Players with recorded activity</div>
               <div className="text-3xl font-bold text-foreground">{metrics.totalPlayers}</div>
             </div>
             <div className="rounded-xl border border-border bg-surface p-5">
@@ -285,9 +255,7 @@ export default function AssignmentDetailPage() {
 
         {/* Player Data */}
         {assignment.players && (() => {
-          const playersArray = Array.isArray(assignment.players) 
-            ? assignment.players 
-            : (assignment.players as { entries?: Player[] })?.entries || [];
+          const playersArray = assignment.players.entries;
           return playersArray.length > 0 ? (
           <div className="rounded-xl border border-border bg-surface p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">
@@ -304,13 +272,13 @@ export default function AssignmentDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {playersArray.slice(0, 10).map((player) => {
-                    const playerAssignment = assignment.player_assignments?.find((pa) => pa.player_id === player.id);
+                    const completed = player.activities?.length && player.activities.every(a => a.completed_at);
                     return (
                       <tr key={player.id} className="hover:bg-surface-100">
                         <td className="px-4 py-3 text-sm font-mono text-muted">#{player.id}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{player.name || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-foreground">{[player.first_name, player.last_name].filter(Boolean).join(' ') || '-'}</td>
                         <td className="px-4 py-3 text-sm text-muted">
-                          {playerAssignment?.end_time ? 'Completed' : 'In Progress'}
+                          {completed ? 'Completed' : 'In Progress'}
                         </td>
                       </tr>
                     );

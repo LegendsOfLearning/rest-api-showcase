@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/contexts/theme";
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isFullScreenPage = pathname === "/login" || pathname === "/sso";
+  const isFullScreenPage = pathname === "/demo/fluency" || pathname === "/login" || pathname === "/sso";
 
   if (isFullScreenPage) {
     return (

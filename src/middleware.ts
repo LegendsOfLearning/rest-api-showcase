@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   // Allow access to login page and login API
   if (
+    request.nextUrl.pathname === '/demo/fluency' ||
+    request.nextUrl.pathname === '/api/demo/fluency' ||
     request.nextUrl.pathname === '/docs' ||
     request.nextUrl.pathname === '/docs/' ||
     request.nextUrl.pathname === '/api/reference/openapi' ||
