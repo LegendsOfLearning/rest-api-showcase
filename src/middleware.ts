@@ -6,6 +6,8 @@ export function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname === '/demo/fluency' ||
     request.nextUrl.pathname === '/api/demo/fluency' ||
+    request.nextUrl.pathname === '/docs/diagrams/partner-assignment-flow.svg' ||
+    request.nextUrl.pathname === '/docs/diagrams/fluency-family.svg' ||
     request.nextUrl.pathname === '/docs' ||
     request.nextUrl.pathname === '/docs/' ||
     request.nextUrl.pathname === '/api/reference/openapi' ||
