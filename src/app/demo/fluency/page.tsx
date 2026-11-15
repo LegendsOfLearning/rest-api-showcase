@@ -14,7 +14,7 @@ export default function FluencyDemo() {
   const [summary, setSummary] = useState<ReturnType<typeof summarize> | null>(null);
   const [copied, setCopied] = useState(false);
   const payload = JSON.stringify(example(preset), null, 2);
-  const curl = `# Set TOKEN to your own application access token.\n# Replace the two date placeholders with ISO 8601 timestamps.\ncurl https://api.legendsoflearning.com/api/v3/assignments \\\n  -H "Authorization: Bearer $TOKEN" \\\n  -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: my-fluency-example-1' \\\n  --data '${payload}'`;
+  const curl = `# Set TOKEN to your own application access token.\n# Replace the two date placeholders with YYYY-MM-DD dates.\ncurl https://api.legendsoflearning.com/api/v3/assignments \\\n  -H "Authorization: Bearer $TOKEN" \\\n  -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: my-fluency-example-1' \\\n  --data '${payload}'`;
   async function step(action: string) {
     setBusy(action); setError('');
     try {
@@ -28,7 +28,7 @@ export default function FluencyDemo() {
     finally { setBusy(''); }
   }
   function download() {
-    const script = `#!/usr/bin/env python3\n"""Run with your own app token and existing teacher: TOKEN=... TEACHER_ID=... python3 fluency-demo.py"""\nimport os, json, urllib.request, datetime, uuid\nbody = json.loads(${JSON.stringify(payload)})\nnow = datetime.datetime.now(datetime.timezone.utc)\nbody.update(application_user_id=os.environ['TEACHER_ID'], start_date=now.isoformat(), end_date=(now+datetime.timedelta(days=1)).isoformat())\nbody['dry_run'] = True  # Change to False to create an assignment.\nrequest = urllib.request.Request('https://api.legendsoflearning.com/api/v3/assignments', data=json.dumps(body).encode(), headers={'Authorization': 'Bearer '+os.environ['TOKEN'], 'Content-Type': 'application/json', 'Idempotency-Key': str(uuid.uuid4())})\nwith urllib.request.urlopen(request) as response:\n    print(json.dumps(json.load(response), indent=2))\n`;
+    const script = `#!/usr/bin/env python3\n"""Run with your own app token and existing teacher: TOKEN=... TEACHER_ID=... python3 fluency-demo.py"""\nimport os, json, urllib.request, datetime, uuid\nbody = json.loads(${JSON.stringify(payload)})\nnow = datetime.datetime.now(datetime.timezone.utc)\nbody.update(application_user_id=os.environ['TEACHER_ID'], start_date=now.date().isoformat(), end_date=(now+datetime.timedelta(days=1)).date().isoformat())\nbody['dry_run'] = True  # Change to False to create an assignment.\nrequest = urllib.request.Request('https://api.legendsoflearning.com/api/v3/assignments', data=json.dumps(body).encode(), headers={'Authorization': 'Bearer '+os.environ['TOKEN'], 'Content-Type': 'application/json', 'Idempotency-Key': str(uuid.uuid4())})\nwith urllib.request.urlopen(request) as response:\n    print(json.dumps(json.load(response), indent=2))\n`;
     const url = URL.createObjectURL(new Blob([script], { type: 'text/x-python' }));
     const a = document.createElement('a'); a.href = url; a.download = 'fluency-demo.py'; a.click(); URL.revokeObjectURL(url);
   }
@@ -49,7 +49,7 @@ export default function FluencyDemo() {
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-bold"><span className="mr-3 text-indigo-600">02</span>Play it</h2>
-          <p className="mt-5 text-sm leading-6 text-slate-600">Create a private demo learner and a one-hour assignment. First-time learners may need to complete Awakening setup before practice.</p>
+          <p className="mt-5 text-sm leading-6 text-slate-600">Create a private demo learner and a practice assignment. Your demo session lasts one hour. First-time learners may need to complete Awakening setup before practice.</p>
           <button className={`${button} mt-6 w-full`} disabled={!facts?.length || !!busy} onClick={() => step('launch')}>{busy === 'launch' ? 'Preparing…' : joinUrl ? 'Refresh play link' : 'Prepare practice'}</button>
           {joinUrl && <a href={joinUrl} target="_blank" rel="noreferrer noopener" className="mt-3 block rounded-xl bg-emerald-600 px-5 py-3 text-center font-semibold text-white">Open Awakening ↗</a>}
           <p className="mt-4 text-xs leading-5 text-slate-500">Keep this page open to check results. Play links are private and expire; refresh the link if needed.</p>

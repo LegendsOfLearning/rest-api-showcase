@@ -58,6 +58,8 @@ test('preview uses fixed selectors and does not create per-visitor users', async
   assert.equal(result.status, 200); assert.equal(calls.length, 1);
   assert.equal(calls[0].path, '/assignments'); assert.equal(calls[0].body.dry_run, true);
   assert.equal(calls[0].body.activities[0].type, 'awakening_fluency');
+  assert.match(calls[0].body.start_date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(calls[0].body.end_date, /^\d{4}-\d{2}-\d{2}$/);
 });
 test('API failures never return upstream credentials or launch URLs', async () => {
   const sentinel = 'fake-private-token-and-launch-url';
