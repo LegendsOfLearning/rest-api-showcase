@@ -1,5 +1,6 @@
+import type { Practice } from './fluency';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-export type DemoSession = { id: string; expires: number; preset?: string; assignment?: number };
+export type DemoSession = { id: string; expires: number; preset?: string; assignment?: number; practice?: Practice; assignmentKey?: string };
 const lifetime = 60 * 60 * 1000;
 function secret() { const key = process.env.FLUENCY_DEMO_SESSION_SECRET; if (!key || key.length < 32) throw new Error('Demo unavailable'); return key; }
 export function newSession(): DemoSession { return { id: randomUUID(), expires: Date.now() + lifetime }; }
