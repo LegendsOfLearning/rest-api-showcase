@@ -71,7 +71,7 @@ The [reporting reference](https://console.legendsoflearning.com/docs/partner-res
 
 ## Continue with code
 
-[Download the Python examples](https://console.legendsoflearning.com/docs/tools-and-examples), replay calls in the [staging Showcase](https://api-showcase.legendsoflearning.com/login?environment=staging&next=%2Fpartners), or run the same operations through [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp). The [Otus Insights example](https://console.legendsoflearning.com/docs/otus-insights) shows a partner-specific recommendation and teacher-confirmation flow.
+[Follow the Partner API quickstart](https://console.legendsoflearning.com/docs/partner-quickstart), [download the Python examples](https://console.legendsoflearning.com/docs/tools-and-examples), or run the same operations through [Partner MCP](https://console.legendsoflearning.com/docs/partner-mcp).
 
 ## Application permissions
 
